@@ -180,7 +180,7 @@ class Extractor:
         for task in done:
             try:
                 c, ids = task.result()
-                all_product_ids[c] = ids
+                all_product_ids[c] = list(ids)
             except Exception as e:
                 logger.error(f"Error in processing task with {e}", exc_info=True)
 
@@ -188,8 +188,8 @@ class Extractor:
         return all_product_ids
 
 
-URL = "https://api.digikala.com/v1/categories/mobile-phone/search/"
+# URL = "https://api.digikala.com/v1/categories/mobile-phone/search/"
 
-e = Extractor(base_url=URL, query="?sort=4&page=", timeout=100)
+# e = Extractor(base_url=URL, query="?sort=4&page=", timeout=100)
 
-asyncio.run(e.get_all_ids_by_brand())
+# brands_info = asyncio.run(e.get_all_ids_by_brand())

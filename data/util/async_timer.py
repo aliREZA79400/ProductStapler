@@ -7,7 +7,7 @@ def async_time():
     def wrapper(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapped(*args, **kwargs) -> Any:
-            print(f"Stratin {func} with args {args} {kwargs}")
+            # print(f"Stratin {func} with args {args} {kwargs}")
             start = time.time()
             try:
                 return await func(*args, **kwargs)
