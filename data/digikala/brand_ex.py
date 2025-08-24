@@ -14,7 +14,7 @@ current_time = datetime.now()
 timestamp = current_time.strftime("%Y-%m-%d_%H-%M-%S")
 
 # Construct the log filename
-log_filename = f"extractor_ids_{timestamp}.log"
+log_filename = f"logs/brand_ex_{timestamp}.log"
 
 # Get the directory of the current script
 script_dir = os.path.dirname(os.path.abspath(__file__))
