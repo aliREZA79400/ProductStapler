@@ -7,5 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "aiofiles>=24.1.0",
     "asyncio>=4.0.0",
+    "motor>=3.7.1",
+    "pymongo>=4.14.1",
     "rnet>=2.4.2",
 ]
