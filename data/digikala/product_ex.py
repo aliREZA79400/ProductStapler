@@ -359,7 +359,7 @@ class ProductExtractor:
 # This section demonstrates how to use the ProductExtractor class
 
 # Load brand information from file
-file_path = "data/digikala/original_data/brands_info.json"
+file_path = "data/digikala/original_data/brands_info_has_price.json"
 try:
     with open(file_path, "r") as f:
         brands_info = json.load(f)
@@ -375,7 +375,7 @@ if brands_info:
     # Initialize extractor with configuration
     extractor = ProductExtractor(base_url=BASE_URL, timeout=400)
     # Set mode: True for comments, False for product data
-    COMMENTS_MODE = True  # Set True to fetch comments instead of product data
+    COMMENTS_MODE = False  # Set True to fetch comments instead of product data
 
     # Run extraction process
     all_results = asyncio.run(

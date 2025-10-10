@@ -87,7 +87,9 @@ class Extractor:
             int: Total number of pages for the brand's products
         """
         # Make request with brand filter to get pagination info
-        req = await self.client.get(url=f"{self.base_url}?brand[0]={brand_id}&page=1")
+        req = await self.client.get(
+            url=f"{self.base_url}?has_selling_stock=1&brand[0]={brand_id}&page=1"
+        )
         res = await req.json()
         # Extract total pages from response
         total_page = res["data"]["pager"]["total_pages"]
@@ -242,10 +244,20 @@ class Extractor:
 
 
 # Example usage (commented out):
-# URL = "https://api.digikala.com/v1/categories/mobile-phone/search/"
-# e = Extractor(base_url=URL, query="?sort=4&page=", timeout=100)
-# brands_info = asyncio.run(e.get_all_ids_by_brand())
+URL = "https://api.digikala.com/v1/categories/mobile-phone/search/"
+e = Extractor(base_url=URL, query="?sort=4&page=", timeout=100)
+brands_info = asyncio.run(e.get_all_ids_by_brand())
 
+import json
+
+# Load brand information from file
+file_path = "data/digikala/original_data/brands_info_has_price.json"
+try:
+    with open(file_path, "w") as f:
+        brands_info = json.dump(brands_info, f)
+except Exception as e:
+    print(f"File not found and accure erroe {e} ")
+    brands_info = None
 ### Extracting Ids by search page
 
 # @async_time()
