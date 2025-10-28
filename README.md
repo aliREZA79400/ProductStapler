@@ -1,2 +1,1 @@
-# KASEB
-Smart Business Advisor
+# Stapler
