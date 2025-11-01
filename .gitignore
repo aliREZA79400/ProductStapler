@@ -3,7 +3,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-
+#MLFlow
+mlartifacts/
 mlruns/
 # C extensions
 *.so

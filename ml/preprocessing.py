@@ -128,8 +128,7 @@ def Initial_Transformation(file_path:str=None , test_size:int = 0.3,cpu_clusters
     df["brand"] = df['brand'].replace(rare_brands, replacement_name)
 
     # Train-test split
-    mobile, mobile_test = train_test_split(df, stratify=df["brand"], test_size=test_size, random_state=42)
-
+    mobile = df.copy()
     # CPU
     # Fill NaN values with a placeholder string and convert to lowercase
     mobile['cpu_cats'] = mobile['cpu_model'].fillna('UnKnown')
@@ -207,7 +206,7 @@ def Initial_Transformation(file_path:str=None , test_size:int = 0.3,cpu_clusters
         ordered=True
     )
 
-    return mobile , mobile_test
+    return mobile , df
 
 
 # ============================================================
