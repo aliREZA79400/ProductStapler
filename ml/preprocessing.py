@@ -7,7 +7,6 @@ from sklearn.impute import SimpleImputer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
 import os
 import re
 
@@ -115,17 +114,11 @@ def extract_size_features(size_str):
     except Exception:
         return np.nan, np.nan
 
-def Initial_Transformation(file_path:str=None , test_size:int = 0.3,cpu_clusters:int =6):
+def Initial_Transformation(file_path:str=None ,cpu_clusters:int =6):
 
     # Load data
     file = find_latest_csv(file_path)
     df = get_dataframe_from_csv(file)
-
-    # Process rare brands
-    brand_counts = df['brand'].value_counts()
-    rare_brands = brand_counts[brand_counts <= 2].index.tolist()
-    replacement_name = 'other'
-    df["brand"] = df['brand'].replace(rare_brands, replacement_name)
 
     # Train-test split
     mobile = df.copy()
@@ -166,8 +159,7 @@ def Initial_Transformation(file_path:str=None , test_size:int = 0.3,cpu_clusters
     # Drop size feature
     mobile = mobile.drop(columns=["size"])
     
-    #TODO delete this after change the csv file
-    mobile = mobile.drop(columns=["color_diversity"])
+
 
     mobile["introduce_date"] = mobile["introduce_date"].astype("str")
 

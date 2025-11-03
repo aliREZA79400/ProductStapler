@@ -334,21 +334,7 @@ class ProductDataReader:
             out[k] = v.strip()
 
         return out
-    
-    
-    def process_colors(self, colors: List[str]) -> int:
-        """
-        Process colors list into a count of available colors.
-        
-        Args:
-            colors: List of color strings
-            
-        Returns:
-            Number of colors available (color diversity)
-        """
-        if not colors:
-            return 0
-        return len(colors)
+
     
     def process_suggestions(self, suggestions: Dict) -> Dict[str, float]:
         """
@@ -412,6 +398,7 @@ class ProductDataReader:
             for doc in documents:
                 # Basic fields
                 processed_doc = {
+                    "id" : doc.get("_id"),
                     "brand": doc.get("brand"),
                     "category": doc.get("category"),
                     "price": doc.get("price"),
@@ -423,7 +410,6 @@ class ProductDataReader:
                 }
                 
                 # Process complex fields
-                processed_doc["color_diversity"] = self.process_colors(doc.get("colors", []))
                 # Process suggestions into separate features
                 suggestions_data = self.process_suggestions(doc.get("suggestions", {}))
                 processed_doc.update(suggestions_data)
@@ -538,7 +524,7 @@ if __name__ == "__main__":
 
             
             # Save to CSV (optional)
-            output_file = f"./dataset/digikala_products_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            output_file = f"ml/dataset/digikala_products_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
             mobile.to_csv(output_file, index=False, encoding='utf-8')
             print(f"Data saved to: {output_file}")
             
