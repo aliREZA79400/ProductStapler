@@ -91,8 +91,9 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # Construct the path to "original_data" relative to the script's directory.
 original_data_path = os.path.join(script_dir, "original_data")
 
-PRODUCTS_FILE = find_latest_file(base_dir=original_data_path, file_type="products")
-COMMENTS_FILE = find_latest_file(base_dir=original_data_path, file_type="comments")
+# Resolve latest input files at runtime inside main; avoid evaluating at import time
+PRODUCTS_FILE = None
+COMMENTS_FILE = None
 
 
 async def setup_database_schemas(db: motor.motor_asyncio.AsyncIOMotorDatabase):
@@ -539,6 +540,15 @@ async def main():
     executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
     client = None
     try:
+        # Discover latest input files now (pipeline may have created them just before)
+        products_path = find_latest_file(base_dir=original_data_path, file_type="products")
+        comments_path = find_latest_file(base_dir=original_data_path, file_type="comments")
+
+        if not products_path:
+            logger.error("No products file found. Ensure the extractor has generated *_products.json.")
+        if not comments_path:
+            logger.error("No comments file found. Ensure the extractor has generated *_comments.json.")
+
         client = AsyncIOMotorClient(MONGO_URI)
         db = client[DB_NAME]
         products_collection = db[PRODUCTS_COLLECTION]
@@ -547,7 +557,7 @@ async def main():
         # Start both pipelines concurrently
         products_task = asyncio.create_task(
             run_chunked_pipeline_concurrently(
-                PRODUCTS_FILE,
+                products_path,
                 products_collection,
                 transform_products,
                 load_products,
@@ -558,7 +568,7 @@ async def main():
 
         comments_task = asyncio.create_task(
             run_chunked_pipeline_concurrently(
-                COMMENTS_FILE,
+                comments_path,
                 comments_collection,
                 transform_comments,
                 load_comments,

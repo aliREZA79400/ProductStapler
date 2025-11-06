@@ -1,21 +1,22 @@
 
 import mlflow
 import os
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
+from motor.motor_asyncio import AsyncIOMotorClient
 
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = "digikala"
-PRODUCTS_COLLECTION = "products"
+DB_NAME = os.getenv("DB_NAME", "digikala")
+PRODUCTS_COLLECTION = os.getenv("PRODUCTS_COLLECTION", "products")
 
 
-#TODO .env file / Docker / environment variable
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
+# Allow overriding tracking via env
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
 
-#TODO best versioning 
-model_name = "Linkage"
-model_version = "2"
+# Model selection via env
+model_name = os.getenv("MODEL_NAME", "Linkage")
+model_version = os.getenv("MODEL_VERSION", "2")
 
 # Load the model from the Model Registry
 model_uri = f"models:/{model_name}/{model_version}"

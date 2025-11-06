@@ -1,0 +1,8 @@
+matplotlib>=3.10.7
+mlflow>=3.5.0
+pandas>=2.3.2
+scikit-learn>=1.7.2
+motor>=3.7.1
+pymongo>=4.15.1
+scipy>=1.13.0
+asyncio>=4.0.0,

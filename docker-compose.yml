@@ -1,0 +1,101 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  data:
+    build:
+      context: .
+      dockerfile: ./data/Dockerfile
+    container_name: data-pipeline
+    restart: on-failure
+    environment:
+      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
+      - PIPELINE_EXTRACT=false
+    volumes:
+      - data_original_data:/app/data/digikala/original_data
+      - data_logs:/app/data/digikala/logs
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: ./ml/Dockerfile
+    container_name: mlflow
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow,localhost,127.0.0.1,*
+    volumes:
+      - ./mlruns:/mlruns:rw
+      - ./mlartifacts:/mlartifacts:rw
+    user: "${UID}:${GID}"
+    healthcheck:
+      # Use Python's stdlib HTTP client (no extra packages required in the image)
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; r=u.urlopen('http://127.0.0.1:5000/health'); sys.exit(0 if r.getcode()==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  ml-worker:
+    build:
+      context: .
+      dockerfile: ./ml/Dockerfile
+    container_name: ml-worker
+    restart: on-failure
+    environment:
+      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
+      - DB_NAME=digikala
+      - PRODUCTS_COLLECTION=products
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MODEL_NAME=${MODEL_NAME:-Linkage}
+      - MODEL_VERSION=${MODEL_VERSION:-2}
+    volumes:
+      - ./mlruns:/app/mlruns:rw
+      - ./mlartifacts:/app/mlartifacts:rw
+    user: "${UID}:${GID}"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    command: ["python", "-m", "ml.model"]
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./back-end/Dockerfile
+    container_name: backend
+    restart: on-failure
+    environment:
+      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
+      - DB_NAME=digikala
+      - PRODUCTS_COLLECTION=products
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  mongodb_data:
+  data_original_data:
+  data_logs:

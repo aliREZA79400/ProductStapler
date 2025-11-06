@@ -375,7 +375,7 @@ if brands_info:
     # Initialize extractor with configuration
     extractor = ProductExtractor(base_url=BASE_URL, timeout=400)
     # Set mode: True for comments, False for product data
-    COMMENTS_MODE = False  # Set True to fetch comments instead of product data
+    COMMENTS_MODE = True  # Set True to fetch comments instead of product data
 
     # Run extraction process
     all_results = asyncio.run(
