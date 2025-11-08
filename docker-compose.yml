@@ -37,6 +37,12 @@ services:
       - "5000:5000"
     environment:
       - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow,localhost,127.0.0.1,*
+      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
+      - DB_NAME=digikala
+      - PRODUCTS_COLLECTION=products
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MODEL_NAME=${MODEL_NAME:-Linkage}
+      - MODEL_VERSION=${MODEL_VERSION:-2}
     volumes:
       # Mount to the paths defined in the Dockerfile's VOLUME instruction.
       - ./mlruns:/app/mlruns:rw
@@ -54,31 +60,9 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-
-  ml-worker:
-    # Reuse the SAME ML build definition.
-    # Docker Compose is smart enough to build it only once.
-    build: *ml-build
-    container_name: ml-worker
-    restart: on-failure
-    environment:
-      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
-      - DB_NAME=digikala
-      - PRODUCTS_COLLECTION=products
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - MODEL_NAME=${MODEL_NAME:-Linkage}
-      - MODEL_VERSION=${MODEL_VERSION:-2}
-    volumes:
-      # CRITICAL: Mount to the same paths as mlflow to share data.
-      - ./mlruns:/app/mlruns:rw
-      - ./mlartifacts:/app/mlartifacts:rw
-    user: "${UID}:${GID}"
     depends_on:
-      mlflow:
-        condition: service_healthy
       mongodb:
         condition: service_healthy
-    command: ["python", "-m", "ml.model"]
 
   backend:
     # Reuse the backend build definition.
@@ -99,4 +83,3 @@ volumes:
   mongodb_data:
   data_original_data:
   data_logs:
-
