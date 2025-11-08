@@ -3,10 +3,11 @@ import json
 import os
 from datetime import datetime
 
+from .digikala import etl as etl_module
+
 # Use absolute imports relative to project root
-from data.digikala.brand_ex import Extractor as BrandExtractor
-from data.digikala.product_ex import ProductExtractor
-from data.digikala import etl as etl_module
+from .digikala.brand_ex import Extractor as BrandExtractor
+from .digikala.product_ex import ProductExtractor
 
 
 def ensure_dirs() -> str:
@@ -21,11 +22,15 @@ def ensure_dirs() -> str:
 
 async def run_brand_extraction(timeout: int) -> dict:
     base_url = "https://api.digikala.com/v1/categories/mobile-phone/search/"
-    extractor = BrandExtractor(base_url=base_url, query="?sort=4&page=", timeout=timeout)
+    extractor = BrandExtractor(
+        base_url=base_url, query="?sort=4&page=", timeout=timeout
+    )
     return await extractor.get_all_ids_by_brand()
 
 
-async def run_products_and_comments(brands_info: dict, timeout: int) -> tuple[list[dict], list[dict]]:
+async def run_products_and_comments(
+    brands_info: dict, timeout: int
+) -> tuple[list[dict], list[dict]]:
     base_url = "https://api.digikala.com/v2/product/"
     extractor = ProductExtractor(base_url=base_url, timeout=timeout)
 
@@ -44,7 +49,12 @@ async def main():
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Toggle via env: when false, only ETL runs and uses existing files
-    extract_flag = os.getenv("PIPELINE_EXTRACT", "true").strip().lower() in {"1", "true", "yes", "on"}
+    extract_flag = os.getenv("PIPELINE_EXTRACT", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
     if extract_flag:
         # 1) Brand IDs
@@ -56,7 +66,9 @@ async def main():
         save_json(brands_info, brands_fixed_path)
 
         # 2) Products and Comments
-        products, comments = await run_products_and_comments(brands_info=brands_info, timeout=400)
+        products, comments = await run_products_and_comments(
+            brands_info=brands_info, timeout=400
+        )
 
         products_path = os.path.join(out_dir, f"{ts}_products.json")
         comments_path = os.path.join(out_dir, f"{ts}_comments.json")
@@ -69,5 +81,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-

@@ -1,5 +1,16 @@
+# Use YAML anchors to define build configurations once.
+# This prevents rebuilding the same image for multiple services.
+x-ml-build: &ml-build
+  context: .
+  dockerfile: ./ml/Dockerfile
+
+x-backend-build: &backend-build
+  context: .
+  dockerfile: ./back-end/Dockerfile
+
 services:
   mongodb:
+    # Best practice: Pin to a specific version instead of 'latest'.
     image: mongo:latest
     container_name: mongodb
     restart: always
@@ -11,31 +22,15 @@ services:
     volumes:
       - mongodb_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  data:
-    build:
-      context: .
-      dockerfile: ./data/Dockerfile
-    container_name: data-pipeline
-    restart: on-failure
-    environment:
-      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
-      - PIPELINE_EXTRACT=false
-    volumes:
-      - data_original_data:/app/data/digikala/original_data
-      - data_logs:/app/data/digikala/logs
-    depends_on:
-      mongodb:
-        condition: service_healthy
-
   mlflow:
-    build:
-      context: .
-      dockerfile: ./ml/Dockerfile
+    # Reuse the ML build definition defined by the anchor.
+    build: *ml-build
     container_name: mlflow
     restart: always
     ports:
@@ -43,21 +38,27 @@ services:
     environment:
       - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow,localhost,127.0.0.1,*
     volumes:
-      - ./mlruns:/mlruns:rw
-      - ./mlartifacts:/mlartifacts:rw
+      # Mount to the paths defined in the Dockerfile's VOLUME instruction.
+      - ./mlruns:/app/mlruns:rw
+      - ./mlartifacts:/app/mlartifacts:rw
     user: "${UID}:${GID}"
     healthcheck:
-      # Use Python's stdlib HTTP client (no extra packages required in the image)
-      test: ["CMD", "python", "-c", "import sys,urllib.request as u; r=u.urlopen('http://127.0.0.1:5000/health'); sys.exit(0 if r.getcode()==200 else 1)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys,urllib.request as u; r=u.urlopen('http://127.0.0.1:5000/health'); sys.exit(0 if r.getcode()==200 else 1)",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
 
   ml-worker:
-    build:
-      context: .
-      dockerfile: ./ml/Dockerfile
+    # Reuse the SAME ML build definition.
+    # Docker Compose is smart enough to build it only once.
+    build: *ml-build
     container_name: ml-worker
     restart: on-failure
     environment:
@@ -68,6 +69,7 @@ services:
       - MODEL_NAME=${MODEL_NAME:-Linkage}
       - MODEL_VERSION=${MODEL_VERSION:-2}
     volumes:
+      # CRITICAL: Mount to the same paths as mlflow to share data.
       - ./mlruns:/app/mlruns:rw
       - ./mlartifacts:/app/mlartifacts:rw
     user: "${UID}:${GID}"
@@ -78,11 +80,9 @@ services:
         condition: service_healthy
     command: ["python", "-m", "ml.model"]
 
-
   backend:
-    build:
-      context: .
-      dockerfile: ./back-end/Dockerfile
+    # Reuse the backend build definition.
+    build: *backend-build
     container_name: backend
     restart: on-failure
     environment:
@@ -99,3 +99,4 @@ volumes:
   mongodb_data:
   data_original_data:
   data_logs:
+

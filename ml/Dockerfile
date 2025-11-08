@@ -20,10 +20,10 @@ COPY ml/ ./ml/
 
 EXPOSE 5000
 
-VOLUME ["/mlruns", "/mlartifacts"]
+VOLUME ["/app/mlruns", "/app/mlartifacts"]
 
 CMD ["mlflow", "server", \
-    "--backend-store-uri", "file:///mlruns", \
-    "--default-artifact-root", "file:///mlartifacts", \
+    "--backend-store-uri", "file:/app/mlruns", \
+    "--default-artifact-root", "file:/app/mlartifacts", \
     "--host", "0.0.0.0", \
     "--port", "5000"]
