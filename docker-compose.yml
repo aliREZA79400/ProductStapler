@@ -6,7 +6,7 @@ x-ml-build: &ml-build
 
 x-backend-build: &backend-build
   context: .
-  dockerfile: ./back-end/Dockerfile
+  dockerfile: ./backend/Dockerfile
 
 services:
   mongodb:
@@ -73,8 +73,13 @@ services:
       - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
       - DB_NAME=digikala
       - PRODUCTS_COLLECTION=products
+      - USERS_COLLECTION=users
+      - SECRET_KEY=${SECRET_KEY:-change-me-to-a-secure-secret-key-in-production}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
     ports:
       - "8000:8000"
+    user: "${UID}:${GID}"
     depends_on:
       mongodb:
         condition: service_healthy

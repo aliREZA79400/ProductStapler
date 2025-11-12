@@ -1,0 +1,10 @@
+fastapi>=0.119.0
+uvicorn>=0.38.0
+aiofiles>=24.1.0
+motor>=3.7.1
+pymongo>=4.15.1
+rnet>=2.4.2
+pwdlib[argon2]>=0.2.0
+PyJWT>=2.9.0
+python-multipart>=0.0.9
+python-decouple>=3.8
