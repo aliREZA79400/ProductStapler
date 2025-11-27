@@ -6,10 +6,11 @@ set -e
 # --- Argument Parsing ---
 
 
-# Default is to run the pipeline.
-RUN_PIPELINE="true"
-if [[ "${1:-}" == "--skip-pipeline" ]]; then
-    RUN_PIPELINE="false"
+RUN_MODE="${RUN_MODE:-scheduler}" # allowed: scheduler|pipeline|idle
+if [[ "${1:-}" == "--once" ]]; then
+    RUN_MODE="pipeline"
+elif [[ "${1:-}" == "--idle" ]]; then
+    RUN_MODE="idle"
 fi
 
 # --- Environment Setup ---
@@ -17,13 +18,11 @@ fi
 # during container startup.
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONUNBUFFERED=1
-export PIPELINE_EXTRACT=false
-export RUN_PIPELINE="$RUN_PIPELINE"
-
-export MONGO_URI="${MONGO_URI:-mongodb://root:example@mongodb:27017/?authSource-admin}"
+export PIPELINE_EXTRACT="${PIPELINE_EXTRACT:-true}"
+export MONGO_URI="${MONGO_URI:-mongodb://root:example@mongodb:27017/?authSource=admin}"
 
 echo "--- Runtime Configuration ---"
-echo "RUN_PIPELINE: $RUN_PIPELINE"
+echo "RUN_MODE: $RUN_MODE"
 echo "MONGO_URI: $MONGO_URI"
 echo "------------------------------"
 
@@ -32,13 +31,17 @@ mkdir -p /app/data/digikala/original_data /app/data/digikala/logs
 
 # --- Execution ---
 
-if [ "$RUN_PIPELINE" = "true" ]; then
-    echo "RUN_PIPELINE is true. Starting the data pipeline..."
-    # Assumes the command is run from the WORKDIR /app
-    python -m data.pipeline
-    echo "Pipeline execution finished."
-else
-    echo "RUN_PIPELINE is false; skipping data.pipeline. Sleeping indefinitely."
-    # Keeps the container running so you can `exec` into it for debugging.
-    sleep infinity
-fi
+case "$RUN_MODE" in
+    "pipeline")
+        echo "Running data pipeline once..."
+        exec python -m data.pipeline
+        ;;
+    "scheduler")
+        echo "Starting scheduler (recurring pipeline runs)..."
+        exec python -m data.scheduler
+        ;;
+    *)
+        echo "RUN_MODE=idle; sleeping indefinitely for debugging."
+        sleep infinity
+        ;;
+esac
