@@ -1,9 +1,9 @@
 """
 Brand Extractor Module for Digikala API
 
-This module provides functionality to extract brand information and product IDs
+This module provides functionality to extract brand information and then product IDs
 from the Digikala API. It includes methods to fetch all brands, get product IDs
-for each brand, and handle pagination with concurrent requests.
+for each brand of mobile phone, and handle pagination with concurrent requests.
 """
 
 import asyncio
@@ -13,8 +13,8 @@ import json
 
 from httpx import AsyncClient 
 
-from ..util.async_timer import async_time
-from ..util.logger import setup_logger
+from .util.async_timer import async_time
+from .util.logger import setup_logger
 
 # Get the current date and time for log file naming
 current_time = datetime.now()
