@@ -534,6 +534,75 @@ async def run_chunked_pipeline_concurrently(
     return total_loaded
 
 
+# --- Separate ETL Functions ---
+async def run_products_etl():
+    """Runs ETL pipeline for products only."""
+    executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
+    client = None
+    try:
+        products_path = find_latest_file(base_dir=original_data_path, file_type="products")
+
+        if not products_path:
+            logger.error("No products file found. Ensure the extractor has generated *_products.json.")
+            return
+
+        client = AsyncIOMotorClient(MONGO_URI)
+        db = client[DB_NAME]
+        products_collection = db[PRODUCTS_COLLECTION]
+
+        await run_chunked_pipeline_concurrently(
+            products_path,
+            products_collection,
+            transform_products,
+            load_products,
+            executor,
+            state="product",
+        )
+
+    except Exception as e:
+        logger.error(f"A critical error occurred in products ETL: {e}", exc_info=True)
+    finally:
+        if client:
+            client.close()
+            logger.info("MongoDB connection closed.")
+        if executor:
+            executor.shutdown(wait=True)
+
+
+async def run_comments_etl():
+    """Runs ETL pipeline for comments only."""
+    executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
+    client = None
+    try:
+        comments_path = find_latest_file(base_dir=original_data_path, file_type="comments")
+
+        if not comments_path:
+            logger.error("No comments file found. Ensure the extractor has generated *_comments.json.")
+            return
+
+        client = AsyncIOMotorClient(MONGO_URI)
+        db = client[DB_NAME]
+        comments_collection = db[COMMENTS_COLLECTION]
+
+        await run_chunked_pipeline_concurrently(
+            comments_path,
+            comments_collection,
+            transform_comments,
+            load_comments,
+            executor,
+            state="comment",
+        )
+
+    except Exception as e:
+        logger.error(f"A critical error occurred in comments ETL: {e}", exc_info=True)
+    finally:
+        if client:
+            client.close()
+            logger.info("MongoDB connection closed.")
+        if executor:
+            executor.shutdown(wait=True)
+
+
 # --- Main Orchestrator ---
 async def main():
     """Initializes and runs the ETL pipelines concurrently."""

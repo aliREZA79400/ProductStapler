@@ -18,7 +18,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 import aiofiles
-from rnet import Client, Impersonate
+from httpx import AsyncClient
 
 from ..util.async_timer import async_time
 from ..util.logger import setup_logger
@@ -58,7 +58,7 @@ class ProductExtractor:
         base_url: str,
         timeout: int,
         concurrency: int = 5,
-        client: Optional[Client] = None,
+        client: Optional[AsyncClient] = None,
         logger_instance=logger,
         comments_base_url: str = "https://api.digikala.com/v1/rate-review/products/",
     ):
@@ -69,7 +69,7 @@ class ProductExtractor:
             base_url (str): Base URL for the Digikala product API endpoint
             timeout (int): Timeout in seconds for HTTP requests
             concurrency (int): Maximum number of concurrent requests (default: 5)
-            client (Optional[Client]): Custom HTTP client instance
+            client (Optional[Async Client]): Custom HTTP client instance
             logger_instance: Logger instance for logging operations
             comments_base_url (str): Base URL for comments API endpoint
         """
@@ -78,9 +78,7 @@ class ProductExtractor:
         # Create semaphore to limit concurrent requests
         self.semaphore = asyncio.Semaphore(concurrency)
         # Use provided client or create default one with Firefox impersonation
-        self.client = client or Client(
-            impersonate=Impersonate.Firefox136, timeout=timeout
-        )
+        self.client = AsyncClient(timeout=timeout,follow_redirects=True)
         self.logger = logger_instance
         self.comments_base_url = comments_base_url
 
@@ -106,7 +104,7 @@ class ProductExtractor:
                 res = await self.client.get(
                     url=f"{self.base_url}{product_id}/", timeout=self.timeout
                 )
-                result = await res.json()
+                result = res.json()
                 # Extract product data from API response structure
                 return result["data"]["product"]
             except json.JSONDecodeError as e:
@@ -247,7 +245,7 @@ class ProductExtractor:
                 # Construct URL for specific page of comments
                 url = f"{self.comments_base_url}{product_id}/?page={page_number}"
                 res = await self.client.get(url=url, timeout=self.timeout)
-                result = await res.json()
+                result = res.json()
                 # Extract comments from API response, default to empty list if not found
                 return result["data"].get("comments", [])
             except json.JSONDecodeError as e:
@@ -285,7 +283,7 @@ class ProductExtractor:
             first_page_response = await self.client.get(
                 url=first_page_url, timeout=self.timeout
             )
-            first_page_result = await first_page_response.json()
+            first_page_result = first_page_response.json()
             total_pages = first_page_result["data"]["pager"]["total_pages"]
 
             # Gather comments from page 1 (already fetched)
@@ -375,7 +373,7 @@ if brands_info:
     # Initialize extractor with configuration
     extractor = ProductExtractor(base_url=BASE_URL, timeout=400)
     # Set mode: True for comments, False for product data
-    COMMENTS_MODE = True  # Set True to fetch comments instead of product data
+    COMMENTS_MODE = False  # Set True to fetch comments instead of product data
 
     # Run extraction process
     all_results = asyncio.run(

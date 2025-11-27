@@ -9,8 +9,9 @@ for each brand, and handle pagination with concurrent requests.
 import asyncio
 import os
 from datetime import datetime
+import json
 
-from rnet import Client, Impersonate
+from httpx import AsyncClient 
 
 from ..util.async_timer import async_time
 from ..util.logger import setup_logger
@@ -55,7 +56,7 @@ class Extractor:
         self.base_url = base_url
         self.query = query
         # Initialize HTTP client with Firefox impersonation for better compatibility
-        self.client = Client(impersonate=Impersonate.Firefox139, timeout=timeout)
+        self.client = AsyncClient(timeout=timeout,follow_redirects=True)
         self.timeout = timeout
 
     @async_time()
@@ -68,7 +69,7 @@ class Extractor:
         """
         # Make request to get brand information
         req = await self.client.get(url=self.base_url)
-        res = await req.json()
+        res = req.json()
         # Extract brand options from API response
         brands = res["data"]["filters"]["brands"]["options"]
         # Create set of (id, code) tuples for all brands
@@ -90,7 +91,7 @@ class Extractor:
         req = await self.client.get(
             url=f"{self.base_url}?has_selling_stock=1&brand[0]={brand_id}&page=1"
         )
-        res = await req.json()
+        res = req.json()
         # Extract total pages from response
         total_page = res["data"]["pager"]["total_pages"]
         return total_page
@@ -126,7 +127,7 @@ class Extractor:
                     resp = await self.client.get(
                         url=f"{self.base_url}?brand[0]={brand_id}&page={page_num}"
                     )
-                    result = await resp.json()
+                    result = resp.json()
                     # Extract product IDs from response
                     products = result["data"]["products"]
                     return {product["id"] for product in products}
@@ -247,8 +248,6 @@ class Extractor:
 URL = "https://api.digikala.com/v1/categories/mobile-phone/search/"
 e = Extractor(base_url=URL, query="?sort=4&page=", timeout=100)
 brands_info = asyncio.run(e.get_all_ids_by_brand())
-
-import json
 
 # Load brand information from file
 file_path = "data/digikala/original_data/brands_info_has_price.json"

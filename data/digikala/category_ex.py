@@ -12,7 +12,7 @@ extracting product data organized by food and grocery categories.
 import asyncio
 from ..util.async_timer import async_time
 from typing import Set, Dict
-from rnet import Impersonate, Client
+from httpx import AsyncClient
 import os
 from datetime import datetime
 from ..util.logger import setup_logger
@@ -57,11 +57,11 @@ async def get_categories(base_url: str, timeout: int) -> Set:
         TODO: Find better way to extract data from JSON response structure
     """
     # Initialize client with mobile browser impersonation for fresh API
-    client = Client(impersonate=Impersonate.FirefoxAndroid135, timeout=timeout)
+    client = AsyncClient(timeout=timeout,follow_redirects=True)
 
     # Make request to get category information
     resp = await client.get(url=base_url)
-    result = await resp.json()
+    result = resp.json()
     # TODO: Find best way to fetch data from json file structure
     # Extract categories from specific widget in API response
     categories = result["data"]["widgets"][3]["data"]["categories"]
@@ -93,13 +93,13 @@ async def get_total_page_of_each_category(
         int: Total number of pages for the specified category
     """
     # Initialize client with Firefox impersonation
-    client = Client(impersonate=Impersonate.Firefox135, timeout=timeout)
+    client = AsyncClient(timeout=timeout,follow_redirects=True)
 
     # Make request to first page to get pagination information
     first_page = await client.get(
         url=f"{base_url}categories/{category_name}/search/{category_query}1"
     )
-    result = await first_page.json()
+    result = first_page.json()
     # Extract total pages from API response
     return result["data"]["pager"]["total_pages"]
 
@@ -132,7 +132,7 @@ async def get_product_ids_of_each_category(
         Uses semaphore with limit of 5 concurrent requests for rate limiting
     """
     # Initialize client with Firefox impersonation
-    client = Client(impersonate=Impersonate.Firefox136, timeout=timeout)
+    client = AsyncClient(timeout=timeout,follow_redirects=True)
 
     # Limit concurrent requests to avoid overwhelming the server
     semaphore = asyncio.Semaphore(5)
@@ -154,7 +154,7 @@ async def get_product_ids_of_each_category(
                     url=f"{base_url}/categories/{category_name}/search/{category_query}{page_num}"
                     # TODO: Parameterize URL construction for better maintainability
                 )
-                result = await resp.json()
+                result = resp.json()
                 # Extract product IDs from response
                 products = result["data"]["products"]
                 return {product["id"] for product in products}
