@@ -11,7 +11,7 @@ x-backend-build: &backend-build
 services:
   mongodb:
     # Best practice: Pin to a specific version instead of 'latest'.
-    image: mongo:latest
+    image: mongo:7
     container_name: mongodb
     restart: always
     environment:
@@ -83,6 +83,37 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+  data-pipeline:
+    build:
+      context: .
+      dockerfile: ./data/Dockerfile
+    container_name: data-pipeline
+    restart: unless-stopped
+    environment:
+      - RUN_MODE=scheduler
+      - PIPELINE_INTERVAL_DAYS=${PIPELINE_INTERVAL_DAYS:-3}
+      - PIPELINE_INITIAL_DELAY_SECONDS=${PIPELINE_INITIAL_DELAY_SECONDS:-0}
+      - PIPELINE_EXTRACT=${PIPELINE_EXTRACT:-true}
+      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - data_original_data:/app/data/digikala/original_data:rw
+      - data_logs:/app/data/digikala/logs:rw
 
 volumes:
   mongodb_data:
