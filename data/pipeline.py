@@ -2,82 +2,160 @@ import asyncio
 import json
 import os
 from datetime import datetime
+from .brand_ex import Extractor as BrandExtractor
+from .product_ex import ProductExtractor
+from .config import (
+    URL,
+    QUERY,
+    TIMEOUT,
+    ENABLE_LOGGING,
+    PRODUCT_BASE_URL,
+    COMMENTS_BASE_URL,
+    COMMENTS_COLLECTION,
+    DB_NAME,
+    MONGO_URI,
+    PRODUCTS_COLLECTION,
+)
+from .util.logger import setup_logger
+from .etl import run_products_etl , run_comments_etl
+import argparse
+import logging
 
-from .digikala import etl as etl_module
 
-# Use absolute imports relative to project root
-from .digikala.brand_ex import Extractor as BrandExtractor
-from .digikala.product_ex import ProductExtractor
+if ENABLE_LOGGING:
+    # --- Setup logger ---
+    # Get the current date and time
+    current_time = datetime.now()
+
+    # Format the date and time into a string suitable for a filename
+    timestamp = current_time.strftime("%Y-%m-%d_%H-%M-%S")
+
+    # Construct the log filename
+    log_filename = f"logs/Pipeline_{timestamp}.log"
+
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Define the full path for the log file
+    log_file_path = os.path.join(script_dir, log_filename)
+
+    logger = setup_logger("Pipeline", log_file_path=log_file_path)
+else : 
+    logger = logging.getLogger("Pipeline")
 
 
 def ensure_dirs() -> str:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    digikala_dir = os.path.join(script_dir, "digikala")
-    original_data_dir = os.path.join(digikala_dir, "original_data")
-    logs_dir = os.path.join(digikala_dir, "logs")
+    original_data_dir = os.path.join("data/original_data")
     os.makedirs(original_data_dir, exist_ok=True)
-    os.makedirs(logs_dir, exist_ok=True)
+    logger.info(f"Ensured directory: {original_data_dir}")
     return original_data_dir
 
 
-async def run_brand_extraction(timeout: int) -> dict:
-    base_url = "https://api.digikala.com/v1/categories/mobile-phone/search/"
-    extractor = BrandExtractor(
-        base_url=base_url, query="?sort=4&page=", timeout=timeout
-    )
-    return await extractor.get_all_ids_by_brand()
+async def run_brand_extraction(timeout: int, url: str, query: str) -> dict:
+    extractor = BrandExtractor(base_url=url, query=query, timeout=timeout)
+    try:
+        return await extractor.get_all_ids_by_brand()
+    except Exception as e:
+        logger.error(f"Error in run_brand_extraction: {e}")
+        raise
 
 
-async def run_products_and_comments(
-    brands_info: dict, timeout: int
+async def run_product_extractor(
+    products_base_url: str, timeout: int, brands_info: dict ,state:str=None ,comments_base_url: str = None
 ) -> tuple[list[dict], list[dict]]:
-    base_url = "https://api.digikala.com/v2/product/"
-    extractor = ProductExtractor(base_url=base_url, timeout=timeout)
+    extractor = ProductExtractor(base_url=products_base_url, timeout=timeout, state=state ,comments_base_url=comments_base_url)
+    try:
+        return await extractor.run(brands_info=brands_info)
+    except Exception as e:
+        logger.error(f"Error in run_product_extractor: {e}")
+        raise
 
-    products = await extractor.run(brands_info=brands_info, comments=False)
-    comments = await extractor.run(brands_info=brands_info, comments=True)
-    return products, comments
 
 
 def save_json(obj, path: str):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False)
+        logger.info(f"Saved JSON data to {path}")
 
 
-async def main():
+async def products_main():
+
     out_dir = ensure_dirs()
-    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    # Toggle via env: when false, only ETL runs and uses existing files
-    extract_flag = os.getenv("PIPELINE_EXTRACT", "true").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    # 1) Brand IDs
+    brands_info = await run_brand_extraction(timeout=TIMEOUT, url=URL, query=QUERY)
+    brands_path = os.path.join(out_dir, f"brands_info_{current_time}.json")
+    save_json(brands_info, brands_path)
+    logger.info(f"Saved brands info to {brands_path}")
 
-    if extract_flag:
-        # 1) Brand IDs
-        brands_info = await run_brand_extraction(timeout=120)
 
-        brands_ts_path = os.path.join(out_dir, f"brands_info_{ts}.json")
-        brands_fixed_path = os.path.join(out_dir, "brands_info_has_price.json")
-        save_json(brands_info, brands_ts_path)
-        save_json(brands_info, brands_fixed_path)
+    # 2) Products 
+    products = await run_product_extractor(
+        products_base_url=PRODUCT_BASE_URL, timeout=TIMEOUT, brands_info=brands_info,state="Products"
+    )
+    products_path = os.path.join(out_dir, f"Products_{current_time}.json")
+    save_json(products, products_path)
+    logger.info(f"Saved products info to {products_path}")
+    
+    # ETL for products
+    return await run_products_etl(
+        mongo_uri=MONGO_URI,
+        product_path=products_path,
+        db_name=DB_NAME,
+        products_collection=PRODUCTS_COLLECTION,
+    )
 
-        # 2) Products and Comments
-        products, comments = await run_products_and_comments(
-            brands_info=brands_info, timeout=400
-        )
 
-        products_path = os.path.join(out_dir, f"{ts}_products.json")
-        comments_path = os.path.join(out_dir, f"{ts}_comments.json")
-        save_json(products, products_path)
-        save_json(comments, comments_path)
+async def comments_main():
+    
+    out_dir = ensure_dirs()
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    # 3) ETL (uses latest *_products.json and *_comments.json automatically)
-    await etl_module.main()
+    # 1) Brand IDs
+    brands_info = await run_brand_extraction(timeout=TIMEOUT, url=URL, query=QUERY)
+    brands_path = os.path.join(out_dir, f"brands_info_{current_time}.json")
+    save_json(brands_info, brands_path)
+    logger.info(f"Saved brands info to {brands_path}")
+
+
+    # 2) Products 
+    comments = await run_product_extractor(
+        products_base_url=PRODUCT_BASE_URL, timeout=TIMEOUT, brands_info=brands_info , state="Comments" , comments_base_url=COMMENTS_BASE_URL
+    )
+    comments_path = os.path.join(out_dir, f"Comments_{current_time}.json")
+    save_json(comments, comments_path)
+    logger.info(f"Saved comments info to {comments_path}")
+    
+    # ETL for products
+    return await run_comments_etl(
+        mongo_uri=MONGO_URI,
+        comments_path=comments_path,
+        db_name=DB_NAME,
+        comments_collection=COMMENTS_COLLECTION,
+    )
+
+
+def main(argv=None):
+    """
+    Entry point for CLI. Accepts an optional argv list (for testability).
+    """
+    parser = argparse.ArgumentParser(description="ETL Pipeline for Products and Comments")
+    parser.add_argument(
+        "--stage",
+        type=str,
+        choices=["Products", "Comments"],
+        default="Products",
+        help="Specify the ETL stage to run: 'Products' or 'Comments'. Default is 'Products'.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.stage == "Products":
+        asyncio.run(products_main())
+    elif args.stage == "Comments":
+        asyncio.run(comments_main())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
+

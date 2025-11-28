@@ -12,28 +12,34 @@ from datetime import datetime
 import json
 
 from httpx import AsyncClient 
-
+from .config import ENABLE_LOGGING , URL , QUERY , TIMEOUT
 from .util.async_timer import async_time
 from .util.logger import setup_logger
+import logging
 
-# Get the current date and time for log file naming
-current_time = datetime.now()
+### Setup logger
+if ENABLE_LOGGING:
+    # Get the current date and time for log file naming
+    current_time = datetime.now()
 
-# Format the date and time into a string suitable for a filename
-# Format: YYYY-MM-DD_HH-MM-SS
-timestamp = current_time.strftime("%Y-%m-%d_%H-%M-%S")
+    # Format the date and time into a string suitable for a filename
+    # Format: YYYY-MM-DD_HH-MM-SS
+    timestamp = current_time.strftime("%Y-%m-%d_%H-%M-%S")
 
-# Construct the log filename with timestamp to avoid conflicts
-log_filename = f"logs/brand_ex_{timestamp}.log"
+    # Construct the log filename with timestamp to avoid conflicts
+    log_filename = f"logs/brand_ex_{timestamp}.log"
 
-# Get the directory of the current script for relative path resolution
-script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Get the directory of the current script for relative path resolution
+    script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Define the full path for the log file
-log_file_path = os.path.join(script_dir, log_filename)
+    # Define the full path for the log file
+    log_file_path = os.path.join(script_dir, log_filename)
 
-# Initialize logger with module name and file path
-logger = setup_logger("Mobile_Ids_Extractor", log_file_path=log_file_path)
+    # Initialize logger with module name and file path
+    logger = setup_logger("Mobile_Ids_Extractor", log_file_path=log_file_path)
+
+else:
+    logger = logging.getLogger("Test")
 
 
 class Extractor:
@@ -44,7 +50,7 @@ class Extractor:
     with proper error handling and logging.
     """
 
-    def __init__(self, base_url, query, timeout) -> None:
+    def __init__(self, base_url:str, query:str, timeout:int) -> None:
         """
         Initialize the Extractor with API configuration.
 
@@ -55,29 +61,40 @@ class Extractor:
         """
         self.base_url = base_url
         self.query = query
-        # Initialize HTTP client with Firefox impersonation for better compatibility
         self.client = AsyncClient(timeout=timeout,follow_redirects=True)
         self.timeout = timeout
 
     @async_time()
-    async def get_all_brands(self):
+    async def get_all_brands(self) -> set:
         """
         Fetch all available brands from the API.
 
         Returns:
             set: Set of tuples containing (brand_id, brand_code) for all brands
         """
-        # Make request to get brand information
-        req = await self.client.get(url=self.base_url)
-        res = req.json()
-        # Extract brand options from API response
+        try:
+           # Make request to get brand information
+           req = await self.client.get(url=self.base_url)
+        except Exception as e:
+            logger.error(f"Error fetching all brands: {e} with status code {req.status_code}", exc_info=True)
+            return set()
+        try:
+           res = req.json()
+        except Exception as e:
+            logger.error(f"Error extracting brands: {e}", exc_info=True)
+            return set()
+        
+        # Extract brand options from API response 
+        #TODO: parameterize this as a query parameter
         brands = res["data"]["filters"]["brands"]["options"]
+
         # Create set of (id, code) tuples for all brands
         all_brands = {(brand["id"], brand["code"]) for brand in brands}
+
         return all_brands
 
     @async_time()
-    async def get_total_pages_of_each_brand(self, brand_id):
+    async def get_total_pages_of_each_brand(self, brand_id:int) -> int:
         """
         Get the total number of pages for products of a specific brand.
 
@@ -88,16 +105,27 @@ class Extractor:
             int: Total number of pages for the brand's products
         """
         # Make request with brand filter to get pagination info
-        req = await self.client.get(
+        try:
+          req = await self.client.get(
+            #TODO: this is business logic . parameterize this as a query parameter
             url=f"{self.base_url}?has_selling_stock=1&brand[0]={brand_id}&page=1"
         )
-        res = req.json()
+        except Exception as e:
+            logger.error(f"Error fetching total pages of brand {brand_id}: {e} with status code {req.status_code}", exc_info=True)
+            return 0
+        try:
+            res = req.json()
+        except Exception as e:
+            logger.error(f"Error extracting total pages of brand {brand_id}: {e}", exc_info=True)
+            return 0
         # Extract total pages from response
+        #TODO: parameterize this as a query parameter
         total_page = res["data"]["pager"]["total_pages"]
+
         return total_page
 
     @async_time()
-    async def get_product_ids_of_each_brand(self, brand_id, total_pages):
+    async def get_product_ids_of_each_brand(self, brand_id:int, total_pages:int) -> set:
         """
         Fetch all product IDs for a specific brand across all its pages.
 
@@ -111,7 +139,7 @@ class Extractor:
         # Limit concurrent requests to avoid overwhelming the server
         semaphore = asyncio.Semaphore(5)
 
-        async def fetch_page(page_num):
+        async def fetch_page(page_num:int) -> set:
             """
             Fetch product IDs from a specific page of a brand.
 
@@ -124,10 +152,19 @@ class Extractor:
             async with semaphore:
                 try:
                     # Construct URL with brand filter and page number
-                    resp = await self.client.get(
+                    #TODO: this is business logic . parameterize this as a query parameter
+                    try :
+                       resp = await self.client.get(
                         url=f"{self.base_url}?brand[0]={brand_id}&page={page_num}"
                     )
-                    result = resp.json()
+                    except Exception as e:
+                        logger.error(f"Error fetching page {page_num} of category {brand_id}: {e} with status code {resp.status_code}", exc_info=True)
+                        return set()
+                    try:
+                        result = resp.json()
+                    except Exception as e:
+                        logger.error(f"Error extracting page {page_num} of category {brand_id}: {e}", exc_info=True)
+                        return set()
                     # Extract product IDs from response
                     products = result["data"]["products"]
                     return {product["id"] for product in products}
@@ -160,7 +197,7 @@ class Extractor:
 
         return product_ids
 
-    async def get_all_ids_by_brand(self):
+    async def get_all_ids_by_brand(self) -> dict:
         """
         Main method to fetch all product IDs organized by brand.
 
@@ -244,102 +281,17 @@ class Extractor:
         return all_product_ids
 
 
-# Example usage (commented out):
-URL = "https://api.digikala.com/v1/categories/mobile-phone/search/"
-e = Extractor(base_url=URL, query="?sort=4&page=", timeout=100)
-brands_info = asyncio.run(e.get_all_ids_by_brand())
+# # Example usage (commented out):
+# e = Extractor(base_url=URL, query=QUERY, timeout=TIMEOUT)
+# brands_info = asyncio.run(e.get_all_ids_by_brand())
 
-# Load brand information from file
-file_path = "data/digikala/original_data/brands_info_has_price.json"
-try:
-    with open(file_path, "w") as f:
-        brands_info = json.dump(brands_info, f)
-except Exception as e:
-    print(f"File not found and accure erroe {e} ")
-    brands_info = None
-### Extracting Ids by search page
+# # Load brand information from file
+# file_path = f"data/original_data/brand_ex_{timestamp}.json"
+# try:
+#     with open(file_path, "w") as f:
+#         brands_info = json.dump(brands_info, f)
+# except Exception as e:
+#     print(f"File not found and accure erroe {e} ")
+#     brands_info = None
 
-# @async_time()
-# async def get_total_pages(self) -> int:
-#     """
-#     Fetch the total number of pages available for the current search.
-#
-#     Returns:
-#         int: Total number of pages in the search results
-#
-#     Raises:
-#         Exception: If API request fails or response format is unexpected
-#     """
-#     # Make initial request to get pagination information
-#     req = await self.client.get(url=self.base_url)
-#     total = await req.json()
-#     # Extract total pages from API response structure
-#     total = total["data"]["pager"]["total_pages"]
-#     logger.info(f"Found {total} pages")
-#     return total
-#
-# @async_time()
-# async def get_all_ids(self) -> Set:
-#     """
-#     Fetch all product IDs from all pages of the search results.
-#
-#     Uses concurrent requests with semaphore to limit concurrent connections
-#     and avoid overwhelming the server.
-#
-#     Returns:
-#         Set: Set of all unique product IDs found across all pages
-#
-#     Note:
-#         Uses semaphore with limit of 5 concurrent requests for rate limiting
-#     """
-#     # Get total pages to determine how many requests to make
-#     total_pages = await self.get_total_pages()
-#
-#     # Limit concurrent requests to avoid overwhelming the server
-#     semaphore = asyncio.Semaphore(5)
-#
-#     @async_time()
-#     async def fetch_page(num_page):
-#         """
-#         Fetch product IDs from a specific page.
-#
-#         Args:
-#             num_page (int): Page number to fetch
-#
-#         Returns:
-#             set: Set of product IDs from the specified page
-#         """
-#         async with semaphore:
-#             try:
-#                 # Construct URL with page number
-#                 req = await self.client.get(
-#                     url=f"{self.base_url}{self.query}{num_page}"
-#                 )
-#                 res = await req.json()
-#                 # Extract product IDs from response
-#                 products = res["data"]["products"]
-#                 return {product["id"] for product in products}
-#             except Exception as e:
-#                 logger.error(
-#                     f"Error fetching page {num_page} with {e}", exc_info=True
-#                 )
-#                 return set()
-#
-#     # Create tasks for all pages concurrently
-#     tasks = [asyncio.create_task(fetch_page(i)) for i in range(1, total_pages + 1)]
-#     # Wait for all tasks to complete with timeout
-#     done, pending = await asyncio.wait(tasks, timeout=self.timeout)
-#
-#     logger.debug(f"Done task : {len(done)} , Pending tassk : {len(pending)} ")
-#
-#     # Collect all product IDs from completed tasks
-#     all_mobile_ids = set()
-#
-#     for task in done:
-#         try:
-#             all_mobile_ids.update(task.result())
-#         except Exception as e:
-#             logger.error(f"Error processing task with {e}")
-#     logger.info(f"Found {len(all_mobile_ids)}")
-#
-#     return all_mobile_ids
+

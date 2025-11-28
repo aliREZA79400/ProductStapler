@@ -4,41 +4,39 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Dict, List, Tuple
-
+import logging
 import aiofiles
 import motor.motor_asyncio
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError, OperationFailure
 
-from ..util.logger import setup_logger
+from .util.logger import setup_logger
+from .config import CHUNK_SIZE , PRODUCTS_COLLECTION , COMMENTS_COLLECTION , ENABLE_LOGGING , MONGO_URI , DB_NAME
 
-# --- Configuration ---
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = "digikala"
-CHUNK_SIZE = 1000
 NUM_PROCESSES = os.cpu_count() or 1
 
-PRODUCTS_COLLECTION = "products"
-COMMENTS_COLLECTION = "comments"
 
-# --- Setup logger ---
-# Get the current date and time
-current_time = datetime.now()
+if ENABLE_LOGGING:
+    # --- Setup logger ---
+    # Get the current date and time
+    current_time = datetime.now()
 
-# Format the date and time into a string suitable for a filename
-timestamp = current_time.strftime("%Y-%m-%d_%H-%M-%S")
+    # Format the date and time into a string suitable for a filename
+    timestamp = current_time.strftime("%Y-%m-%d_%H-%M-%S")
 
-# Construct the log filename
-log_filename = f"logs/ETL_{timestamp}.log"
+    # Construct the log filename
+    log_filename = f"logs/ETL_{timestamp}.log"
 
-# Get the directory of the current script
-script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Define the full path for the log file
-log_file_path = os.path.join(script_dir, log_filename)
+    # Define the full path for the log file
+    log_file_path = os.path.join(script_dir, log_filename)
 
-logger = setup_logger("ETL Pipeline", log_file_path=log_file_path)
+    logger = setup_logger("ETL Pipeline", log_file_path=log_file_path)
+else : 
+    logger = logging.getLogger("ETL Pipeline")
 
 
 def find_latest_file(base_dir: str, file_type: str) -> str | None:
@@ -48,7 +46,7 @@ def find_latest_file(base_dir: str, file_type: str) -> str | None:
 
     Args:
         base_dir: The directory to search in.
-        file_type: The type of file to find (e.g., "products" or "comments").
+        file_type: The type of file to find (e.g., "Products" or "Comments").
 
     Returns:
         The full path to the latest file, or None if no file is found.
@@ -62,8 +60,8 @@ def find_latest_file(base_dir: str, file_type: str) -> str | None:
         all_files = os.listdir(base_dir)
 
         # Filter for files that match the naming convention
-        # e.g., "2025-08-24_16-36-04_products.json"
-        matching_files = [f for f in all_files if f.endswith(f"_{file_type}.json")]
+        # e.g., "2025-08-24_16-36-04_Products.json"
+        matching_files = [f for f in all_files if f.startswith(f"{file_type}_") and f.endswith(".json")]
 
         if not matching_files:
             logger.warning(f"No files of type '{file_type}' found.")
@@ -87,13 +85,6 @@ def find_latest_file(base_dir: str, file_type: str) -> str | None:
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Construct the path to "original_data" relative to the script's directory.
-original_data_path = os.path.join(script_dir, "original_data")
-
-# Resolve latest input files at runtime inside main; avoid evaluating at import time
-PRODUCTS_FILE = None
-COMMENTS_FILE = None
 
 
 async def setup_database_schemas(db: motor.motor_asyncio.AsyncIOMotorDatabase):
@@ -283,15 +274,16 @@ def transform_products(raw_chunc: list[dict]) -> list[UpdateOne]:
     for item in raw_chunc:
         doc_id = item.get("id")
 
-        if not all(
-            [
-                doc_id,
-                item.get("title_en"),
-                item.get("brand"),
-                item.get("category"),
-                item.get("specifications"),
-            ]
-        ):
+        # Treat empty dicts/lists as present (e.g., brand={}, specifications={})
+        # Only skip when a required value is missing or explicitly None
+        required_present = [
+            doc_id is not None,
+            item.get("title_en") is not None,
+            item.get("brand") is not None,
+            item.get("category") is not None,
+            item.get("specifications") is not None,
+        ]
+        if not all(required_present):
             logger.warning(
                 f"Skipping product with missing required fields: {doc_id or 'N/A'}"
             )
@@ -428,7 +420,8 @@ async def extract_comments_in_chunks(file_path: str):
             for brand in raw_data:
                 for brand_key, brand_comments in brand.items():
                     for cl in brand_comments:
-                        if isinstance(cl, list) & (cl is not None):
+                        # use logical AND, and ensure we only extend with iterables
+                        if isinstance(cl, list) and cl is not None:
                             flat_list.extend(cl)
                         else:
                             logger.warning(
@@ -535,23 +528,17 @@ async def run_chunked_pipeline_concurrently(
 
 
 # --- Separate ETL Functions ---
-async def run_products_etl():
+async def run_products_etl(mongo_uri: str, product_path: str,db_name: str ,products_collection: str):
     """Runs ETL pipeline for products only."""
     executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
     client = None
     try:
-        products_path = find_latest_file(base_dir=original_data_path, file_type="products")
-
-        if not products_path:
-            logger.error("No products file found. Ensure the extractor has generated *_products.json.")
-            return
-
-        client = AsyncIOMotorClient(MONGO_URI)
-        db = client[DB_NAME]
-        products_collection = db[PRODUCTS_COLLECTION]
+        client = AsyncIOMotorClient(mongo_uri)
+        db = client[db_name]
+        products_collection = db[products_collection]
 
         await run_chunked_pipeline_concurrently(
-            products_path,
+            product_path,
             products_collection,
             transform_products,
             load_products,
@@ -569,20 +556,14 @@ async def run_products_etl():
             executor.shutdown(wait=True)
 
 
-async def run_comments_etl():
+async def run_comments_etl(mongo_uri: str, comments_path: str, db_name: str , comments_collection: str):
     """Runs ETL pipeline for comments only."""
     executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
     client = None
     try:
-        comments_path = find_latest_file(base_dir=original_data_path, file_type="comments")
-
-        if not comments_path:
-            logger.error("No comments file found. Ensure the extractor has generated *_comments.json.")
-            return
-
-        client = AsyncIOMotorClient(MONGO_URI)
-        db = client[DB_NAME]
-        comments_collection = db[COMMENTS_COLLECTION]
+        client = AsyncIOMotorClient(mongo_uri)
+        db = client[db_name]
+        comments_collection = db[comments_collection]
 
         await run_chunked_pipeline_concurrently(
             comments_path,
@@ -603,25 +584,25 @@ async def run_comments_etl():
             executor.shutdown(wait=True)
 
 
-# --- Main Orchestrator ---
+# --- Main Orchestrator / Example Usage---
 async def main():
     """Initializes and runs the ETL pipelines concurrently."""
     executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
     client = None
     try:
         # Discover latest input files now (pipeline may have created them just before)
-        products_path = find_latest_file(base_dir=original_data_path, file_type="products")
-        comments_path = find_latest_file(base_dir=original_data_path, file_type="comments")
+        products_path = find_latest_file(base_dir="./original_data", file_type="Products")
+        # comments_path = find_latest_file(base_dir="./original_data", file_type="Comments")
 
-        if not products_path:
-            logger.error("No products file found. Ensure the extractor has generated *_products.json.")
-        if not comments_path:
-            logger.error("No comments file found. Ensure the extractor has generated *_comments.json.")
-
+        # if not products_path:
+        #     logger.error("No products file found. Ensure the extractor has generated *_products.json.")
+        # if not comments_path:
+        #     logger.error("No comments file found. Ensure the extractor has generated *_comments.json.")
+        print(MONGO_URI)
         client = AsyncIOMotorClient(MONGO_URI)
         db = client[DB_NAME]
         products_collection = db[PRODUCTS_COLLECTION]
-        comments_collection = db[COMMENTS_COLLECTION]
+        # comments_collection = db[COMMENTS_COLLECTION]
 
         # Start both pipelines concurrently
         products_task = asyncio.create_task(
@@ -635,18 +616,18 @@ async def main():
             )
         )
 
-        comments_task = asyncio.create_task(
-            run_chunked_pipeline_concurrently(
-                comments_path,
-                comments_collection,
-                transform_comments,
-                load_comments,
-                executor,
-                state="comment",
-            )
-        )
+        # comments_task = asyncio.create_task(
+        #     run_chunked_pipeline_concurrently(
+        #         comments_path,
+        #         comments_collection,
+        #         transform_comments,
+        #         load_comments,
+        #         executor,
+        #         state="comment",
+        #     )
+        # )
 
-        await asyncio.gather(products_task, comments_task)
+        await asyncio.gather(products_task)
 
     #   await setup_database_schemas(db)
     except Exception as e:
