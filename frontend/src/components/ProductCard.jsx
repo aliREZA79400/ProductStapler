@@ -19,7 +19,7 @@ const ProductCard = ({ product }) => {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow duration-200">
+    <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow duration-200 border-r-4 border-blue-400">
       {/* Product Images */}
       {sampleImages.length > 0 && (
         <div className="mb-4 grid grid-cols-3 gap-2">
@@ -27,7 +27,7 @@ const ProductCard = ({ product }) => {
             <div key={idx} className="aspect-square overflow-hidden rounded-md bg-gray-100">
               <img
                 src={imageUrl}
-                alt={`Product image ${idx + 1}`}
+                alt={`تصویر محصول ${idx + 1}`}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.target.style.display = 'none';
@@ -54,7 +54,7 @@ const ProductCard = ({ product }) => {
           to={`/product/${product._id}`}
           className="mt-4 inline-block text-blue-500 hover:text-blue-600 text-sm font-medium"
         >
-          View Details →
+          ← مشاهده جزئیات
         </Link>
       )}
     </div>

@@ -1,12 +1,17 @@
 # Stapler - Product Clustering & Categorization System
 
-![alt text](images/logo.png)
+<div align="center">
+
+![alt text](images/mangane_main_page.png)
+
+</div>
 
 Stapler is the answer to this question.
 
 What if instead of pagination of products, we could see them categorized and make a more targeted and intelligent choice?
 
-This Project end-to-end system for web scraping, machine learning-based product clustering, and hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
+This Project is an end-to-end system from web scraping to hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
+
 
 ## Project Overview
 
@@ -24,7 +29,7 @@ The system is designed with a microservices architecture, fully containerized wi
 ```text
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Frontend  │◀────│    Backend   │◀────│   MongoDB   │◀────│Data Pipeline│
-│   (React)   │     │   (FastAPI)  │     │             │     │  (Prefect)  │
+│   (React)   │     │   (FastAPI)  │     │             │     │             │
 └─────────────┘     └──────────────┘     └─────────────┘     └─────────────┘
                                                 ▲
                                                 │
@@ -33,6 +38,9 @@ The system is designed with a microservices architecture, fully containerized wi
                                         │   (MLflow)   │
                                         └──────────────┘
 ```
+## AI Use Note
+The entire frontend section is written with LLM (Claude 4.5). Other sections are used for documentation, cleaning, test writing, and using hints.
+
 
 ### Data Flow
 
@@ -44,6 +52,12 @@ The system is designed with a microservices architecture, fully containerized wi
 ## Project Components
 
 ### 📊 Data Pipeline (`data/`)
+
+<div align="center">
+
+![alt text](images/prefect.png)
+
+</div>
 
 **Purpose**: Async web scraping and ETL pipeline for product data extraction and loading.
 
@@ -73,6 +87,12 @@ The system is designed with a microservices architecture, fully containerized wi
 **See**: [`data/README.md`](data/README.md) for detailed documentation.
 
 ### 🤖 Machine Learning Pipeline (`ml/`)
+
+<div align="center">
+
+![alt text](images/mlflow.png)
+
+</div>
 
 **Purpose**: Product clustering using hierarchical nested clustering algorithms.
 
@@ -178,118 +198,6 @@ The `docker-compose.yml` defines five main services:
 3. **Backend** (FastAPI REST API)
 4. **Frontend** (React + Nginx)
 5. **Data Pipeline** (Prefect + Scraping Pipeline)
-
-### Service Details
-
-#### 1. MongoDB Service
-
-```yaml
-mongodb:
-  image: mongo:7
-  ports: 27017:27017
-  volumes: mongodb_data:/data/db
-  healthcheck: MongoDB ping test
-```
-
-**Purpose**: Primary database for products, users, and cluster assignments.
-
-**Features**:
-
-- Persistent data storage via Docker volume
-- Health checks for service dependency management
-- Authentication enabled (root/example - change in production!)
-
-#### 2. MLflow Service
-
-```yaml
-mlflow:
-  build: ml/Dockerfile
-  ports: 5000:5000
-  volumes: mlruns, mlartifacts
-  depends_on: mongodb (healthy)
-```
-
-**Purpose**: MLflow tracking server for experiment tracking and model registry.
-
-**Features**:
-
-- Runs MLflow server on port 5000
-- Persistent storage for runs and artifacts
-- Automatic cron job for model updates (6:23 AM daily)
-- Waits for MongoDB to be healthy before starting
-
-#### 3. Backend Service
-
-```yaml
-backend:
-  build: backend/Dockerfile
-  ports: 8000:8000
-  depends_on: mongodb (healthy)
-```
-
-**Purpose**: FastAPI REST API server.
-
-**Features**:
-
-- Async FastAPI application
-- Auto-reload enabled for development
-- Waits for MongoDB to be healthy
-
-#### 4. Frontend Service
-
-```yaml
-frontend:
-  build: frontend/Dockerfile (multi-stage)
-  ports: 8080:80
-  depends_on: backend (started)
-```
-
-**Purpose**: React application served via Nginx.
-
-**Features**:
-
-- Multi-stage build (deps → build → nginx)
-- Production-optimized Nginx configuration
-- Waits for backend to start
-
-#### 5. Data Pipeline Service
-
-```yaml
-data-pipeline:
-  build: data/Dockerfile
-  env_file: ./data/.env_data
-  volumes: original_data, logs
-  depends_on: mongodb (healthy)
-```
-
-**Purpose**: Prefect server and automated data pipeline.
-
-**Features**:
-
-- Prefect server on port 4200
-- Automated daily pipeline execution
-- Persistent volumes for scraped data and logs
-- Environment configuration from `.env_data`
-
-### Volume Management
-
-Docker volumes ensure data persistence across container restarts:
-
-- `mongodb_data`: Database files
-- `data_original_data`: Scraped JSON files
-- `data_logs`: Pipeline execution logs
-- `mlruns`: MLflow experiment runs (host-mounted)
-- `mlartifacts`: MLflow model artifacts (host-mounted)
-
-### Health Checks & Dependencies
-
-The Compose file implements proper dependency management:
-
-- **Health Checks**: MongoDB has ping-based health check
-- **Service Dependencies**:
-  - Backend, MLflow, Data Pipeline wait for MongoDB to be healthy
-  - Frontend waits for Backend to start
-- **Start Order**: Ensures services start in correct sequence
 
 ### Build Optimization
 
@@ -405,54 +313,6 @@ curl http://localhost:4200/health
 - **MLflow UI**: <http://localhost:5000>
 - **MongoDB**: `mongodb://localhost:27017`
 
-### Docker Compose Commands
-
-```bash
-# Start all services in background
-docker-compose up -d
-
-# Start and view logs
-docker-compose up
-
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (⚠️ deletes data)
-docker-compose down -v
-
-# Rebuild specific service
-docker-compose build backend
-
-# Restart specific service
-docker-compose restart backend
-
-# View logs for specific service
-docker-compose logs -f backend
-
-# Execute command in service container
-docker-compose exec backend bash
-
-# Check service health
-docker-compose ps
-```
-
-### Development Workflow
-
-For development, you may want to run services individually:
-
-```bash
-# Start only MongoDB and MLflow
-docker-compose up -d mongodb mlflow
-
-# Run backend locally with auto-reload
-cd backend && uvicorn main:app --reload
-
-# Run frontend locally
-cd frontend && npm run dev
-
-# Run data pipeline locally
-cd data && python -m pipeline --stage Products
-```
 
 ## Project Structure
 
@@ -577,34 +437,6 @@ The entire system follows a three-level hierarchy:
 - **Scalability**: Async operations, chunked processing
 - **Persistence**: Docker volumes for data retention
 
-## Configuration Summary
-
-### Environment Variables by Service
-
-#### MongoDB
-
-- `MONGO_INITDB_ROOT_USERNAME`: Database root username
-- `MONGO_INITDB_ROOT_PASSWORD`: Database root password
-
-#### Backend
-
-- `MONGO_URI`: MongoDB connection string
-- `DB_NAME`: Database name
-- `SECRET_KEY`: JWT signing key (change in production!)
-- `KEYS_TO_SHOW`: Comma-separated fields to expose
-
-#### MLflow
-
-- `MLFLOW_TRACKING_URI`: MLflow server URL
-- `MODEL_NAME`: Model name in registry
-- `MODEL_VERSION`: Model version to use
-
-#### Data Pipeline
-
-- `URL`, `PRODUCT_BASE_URL`, `COMMENTS_BASE_URL`: API endpoints
-- `PREFECT_HOST`, `PREFECT_PORT`: Prefect server configuration
-
-See individual README files for complete configuration details.
 
 ## Development Setup (Without Docker)
 
@@ -617,36 +449,6 @@ If you prefer running services locally:
 - MongoDB 7+
 - Git
 
-### Local Setup
-
-```bash
-# 1. Install Python dependencies (using uv or pip)
-pip install -r backend/requirements.txt
-pip install -r data/requirements.txt
-pip install -r ml/requirements.txt
-
-# 2. Install Node.js dependencies
-cd frontend && npm install
-
-# 3. Start MongoDB locally
-mongod
-
-# 4. Start services in separate terminals
-
-# Terminal 1: Backend
-cd backend && uvicorn main:app --reload
-
-# Terminal 2: MLflow
-cd ml && ./start.sh
-
-# Terminal 3: Data Pipeline
-cd data && ./start.sh
-
-# Terminal 4: Frontend
-cd frontend && npm run dev
-```
-
-**Note**: Docker Compose is the recommended approach for consistent development and deployment.
 
 ## Usage Examples
 

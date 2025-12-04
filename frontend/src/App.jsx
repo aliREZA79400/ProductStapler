@@ -14,7 +14,7 @@ const App = () => {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-gray-100" style={{ direction: 'rtl' }}>
           <Navbar />
           <Routes>
             {/* Public routes */}

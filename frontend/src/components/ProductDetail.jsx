@@ -34,7 +34,7 @@ const ProductDetail = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="text-xl text-gray-600">Loading...</div>
+        <div className="text-xl text-gray-600">⏳ درحال بارگذاری...</div>
       </div>
     );
   }
@@ -46,10 +46,10 @@ const ProductDetail = () => {
           onClick={() => navigate(-1)}
           className="mb-4 text-blue-500 hover:text-blue-600"
         >
-          ← Back
+          ← بازگشت
         </button>
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+          ❌ {error}
         </div>
       </div>
     );
@@ -77,16 +77,16 @@ const ProductDetail = () => {
         onClick={() => navigate(-1)}
         className="mb-6 text-blue-500 hover:text-blue-600 font-medium"
       >
-        ← Back
+        ← بازگشت
       </button>
 
       <div className="bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Product Details</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">🛍️ جزئیات محصول</h1>
         
         {/* Product Images Gallery */}
         {productImages.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-700 mb-3">Images</h2>
+            <h2 className="text-xl font-semibold text-gray-700 mb-3">📸 تصاویر</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {productImages.map((imageUrl, idx) => (
                 <div key={idx} className="aspect-square overflow-hidden rounded-lg bg-gray-100">
