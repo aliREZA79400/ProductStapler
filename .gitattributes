@@ -1,2 +1,1 @@
-*.Jupyter linguist-detectable=false
-
+*.ipynb linguist-vendored
