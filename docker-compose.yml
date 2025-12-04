@@ -35,14 +35,8 @@ services:
     restart: always
     ports:
       - "5000:5000"
-    environment:
-      - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow,localhost,127.0.0.1,*
-      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
-      - DB_NAME=digikala
-      - PRODUCTS_COLLECTION=products
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - MODEL_NAME=${MODEL_NAME:-Linkage}
-      - MODEL_VERSION=${MODEL_VERSION:-2}
+    env_file:
+      - ./ml/.env
     volumes:
       # Mount to the paths defined in the Dockerfile's VOLUME instruction.
       - ./mlruns:/app/mlruns:rw
@@ -69,14 +63,8 @@ services:
     build: *backend-build
     container_name: backend
     restart: on-failure
-    environment:
-      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
-      - DB_NAME=digikala
-      - PRODUCTS_COLLECTION=products
-      - USERS_COLLECTION=users
-      - SECRET_KEY=${SECRET_KEY:-change-me-to-a-secure-secret-key-in-production}
-      - ALGORITHM=${ALGORITHM:-HS256}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+    env_file:
+      - ./backend/.env
     ports:
       - "8000:8000"
     user: "${UID}:${GID}"

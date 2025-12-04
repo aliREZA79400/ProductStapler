@@ -1,6 +1,6 @@
-# Kaseb Frontend
+# Frontend
 
-React frontend application for the Kaseb product categorization system.
+React frontend application for the  product categorization system.
 
 ## Features
 
