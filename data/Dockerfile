@@ -1,23 +1,24 @@
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    POETRY_VIRTUALENVS_CREATE=false \
-    PYTHONPATH=/app
+  PYTHONUNBUFFERED=1 \
+  PIP_NO_CACHE_DIR=1 \
+  POETRY_VIRTUALENVS_CREATE=false \
+  PYTHONPATH=/app
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
 
-COPY data/requirements.txt /tmp/requirements.txt
-RUN python -m pip install -r /tmp/requirements.txt
+COPY data/requirements.txt ./data/requirements.txt
 
-COPY data /app/data
+RUN python -m pip install --upgrade pip -r ./data/requirements.txt  
 
-RUN chmod +x /app/data/runner.sh
+COPY data ./data
+COPY .env_data ./
+EXPOSE 4200
 
-ENTRYPOINT ["/app/data/runner.sh"]
+VOLUME ["/app/data/original_data", "/app/data/logs"]
+
+CMD ["/bin/bash", "data/start.sh"]
 

@@ -11,10 +11,22 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 COPY ml/requirements.txt ./ml/requirements.txt
 RUN python -m pip install --upgrade pip --no-cache-dir \
-    && pip install -r ml/requirements.txt
+    && pip install -r ml/requirements.txt \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends cron \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY ml/ ./ml/
 
+# Copy and set up cron job
+RUN mkdir -p /var/log
+COPY ml/crontab /etc/cron.d/model-cron
+RUN chmod 0644 /etc/cron.d/model-cron \
+    && crontab /etc/cron.d/model-cron \
+    && touch /var/log/model_cron.log
+
+# Make startup script executable
+RUN chmod +x ml/start.sh
 
 # Optional: fix permissions if needed
 
@@ -22,8 +34,4 @@ EXPOSE 5000
 
 VOLUME ["/app/mlruns", "/app/mlartifacts"]
 
-CMD ["mlflow", "server", \
-    "--backend-store-uri", "file:/app/mlruns", \
-    "--default-artifact-root", "file:/app/mlartifacts", \
-    "--host", "0.0.0.0", \
-    "--port", "5000"]
+CMD ["/bin/bash", "ml/start.sh"]

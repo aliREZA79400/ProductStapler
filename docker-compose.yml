@@ -102,12 +102,10 @@ services:
       dockerfile: ./data/Dockerfile
     container_name: data-pipeline
     restart: unless-stopped
-    environment:
-      - RUN_MODE=scheduler
-      - PIPELINE_INTERVAL_DAYS=${PIPELINE_INTERVAL_DAYS:-3}
-      - PIPELINE_INITIAL_DELAY_SECONDS=${PIPELINE_INITIAL_DELAY_SECONDS:-0}
-      - PIPELINE_EXTRACT=${PIPELINE_EXTRACT:-true}
-      - MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
+    env_file:
+      - ./data/.env_data
+    ports:
+      - "${DATA_PIPELINE_PORT:-4200}"
     depends_on:
       mongodb:
         condition: service_healthy

@@ -1,26 +1,21 @@
-import os
-
 import mlflow
+from mlflow import sklearn
 from motor.motor_asyncio import AsyncIOMotorClient
+from .config import (
+    MONGO_URI,
+    DB_NAME,
+    PRODUCTS_COLLECTION,
+    MLFLOW_TRACKING_URI,
+    MODEL_NAME,
+    MODEL_VERSION,
+)
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = os.getenv("DB_NAME", "digikala")
-PRODUCTS_COLLECTION = os.getenv("PRODUCTS_COLLECTION", "products")
 
-
-# Allow overriding tracking via env
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-
-
-# Model selection via env
-model_name = os.getenv("MODEL_NAME", "Linkage")
-model_version = os.getenv("MODEL_VERSION", "2")
-
 # Load the model from the Model Registry
-model_uri = f"models:/{model_name}/{model_version}"
+model_uri = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
 
-model = mlflow.sklearn.load_model(model_uri)
+model = sklearn.load_model(model_uri)
 
 all_products_cluster_info = model.sample_assignments
 print(all_products_cluster_info)
@@ -32,9 +27,32 @@ products_collection = db[PRODUCTS_COLLECTION]
 async def update_products_cluster_info():
     """
     Update products with cluster information using all_products_cluster_info data.
+    If not found, use model.predict to assign cluster info.
+    Uses extract_features_to_X from ml.preprocessing.
     """
+    from ml.preprocessing import Preprocessor
+
     # Convert list of dicts to dict with id as key for faster lookup
     cluster_info_map = {item["id"]: item for item in all_products_cluster_info}
+
+    # Pre-load the preprocessing pipeline
+    preprocessing = Preprocessor()
+
+    def extract_features_to_X(product):
+        """
+        Converts a product dict to a feature vector suitable for model.predict
+        This assumes product is a dictionary like from MongoDB.
+        """
+        import pandas as pd
+        # Put product into single-row DataFrame
+        df = pd.DataFrame([product])
+        # Only use columns present in the preprocessing pipeline
+        # If columns are missing, we just let the transformers impute/fail as designed
+        X_array = preprocessing.transform(df)
+        # If more than 1D output, flatten or select first row
+        if X_array.shape[0] == 1:
+            return X_array[0]
+        return X_array
 
     # Find all products that need updating
     cursor = products_collection.find({"cluster_info": {"$exists": False}})
@@ -47,13 +65,25 @@ async def update_products_cluster_info():
                     "level2_id": cluster_info_map[product["_id"]]["level2_id"],
                     "level3_id": cluster_info_map[product["_id"]]["level3_id"],
                 }
-
-                # Update the product with cluster information
-                await products_collection.update_one(
-                    {"_id": product["_id"]}, {"$set": {"cluster_info": cluster_info}}
-                )
             else:
-                print(f"No cluster info found for product {product['_id']}")
+                # If no cluster info is found, use model.predict to assign
+                print(f"No cluster info found for product {product['_id']}, predicting cluster info...")
+                try:
+                    X_query = extract_features_to_X(product)
+                    pred_result = model.predict([X_query])[0]  # predict expects 2D shape
+                    cluster_info = {
+                        "level1_id": pred_result.get("level1_id"),
+                        "level2_id": pred_result.get("level2_id"),
+                        "level3_id": pred_result.get("level3_id"),
+                    }
+                except Exception as ee:
+                    print(f"Error extracting features or predicting for product {product.get('_id')}: {str(ee)}")
+                    continue  # skip updating if can't extract/predict
+
+            # Update the product with cluster information
+            await products_collection.update_one(
+                {"_id": product["_id"]}, {"$set": {"cluster_info": cluster_info}}
+            )
 
         except Exception as e:
             print(f"Error processing product {product.get('_id')}: {str(e)}")

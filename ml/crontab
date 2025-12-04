@@ -1,0 +1,7 @@
+# Set environment variables
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Run model.py every day at 6:23 AM
+23 6 * * * cd /app && /usr/local/bin/python3 -m ml.model >> /var/log/model_cron.log 2>&1
+
