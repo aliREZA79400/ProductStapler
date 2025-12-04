@@ -1,6 +1,6 @@
 # Stapler - Product Clustering & Categorization System
 
-![](<images/logo.png>)
+![alt text](images/logo.png)
 
 Stapler is the answer to this question.
 
