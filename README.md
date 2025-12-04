@@ -1,10 +1,16 @@
-# KASEB - Product Clustering & Categorization System
+# Stapler - Product Clustering & Categorization System
 
-A comprehensive end-to-end system for web scraping, machine learning-based product clustering, and hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
+![](<images/logo.png>)
+
+Stapler is the answer to this question.
+
+What if instead of pagination of products, we could see them categorized and make a more targeted and intelligent choice?
+
+This Project end-to-end system for web scraping, machine learning-based product clustering, and hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
 
 ## Project Overview
 
-KASEB is a full-stack application that:
+Stapler is a full-stack application that:
 
 1. **Scrapes** product data from web APIs using high-performance async operations
 2. **Clusters** products using hierarchical nested clustering algorithms
@@ -17,7 +23,7 @@ The system is designed with a microservices architecture, fully containerized wi
 
 ```text
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│    Backend   │◀────│   MongoDB   │◀────│Data Pipeline│
+│   Frontend  │◀────│    Backend   │◀────│   MongoDB   │◀────│Data Pipeline│
 │   (React)   │     │   (FastAPI)  │     │             │     │  (Prefect)  │
 └─────────────┘     └──────────────┘     └─────────────┘     └─────────────┘
                                                 ▲
@@ -309,7 +315,7 @@ Services reference these anchors, enabling efficient image reuse.
 
 ```bash
 git clone <repository-url>
-cd KASEB
+cd Stapler
 ```
 
 #### 2. Configure Environment Variables
@@ -451,7 +457,7 @@ cd data && python -m pipeline --stage Products
 ## Project Structure
 
 ```text
-KASEB/
+Stapler/
 ├── README.md                 # This file
 ├── docker-compose.yml        # Docker Compose orchestration
 ├── pyproject.toml           # Python project configuration
