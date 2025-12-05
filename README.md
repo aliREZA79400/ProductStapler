@@ -448,20 +448,6 @@ See individual README files:
 - [`frontend/README.md`](frontend/README.md) - Frontend troubleshooting
 
 
-### Resource Limits
-
-Consider setting resource limits in `docker-compose.yml` for production:
-
-```yaml
-services:
-  backend:
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-```
-
 ## Security Considerations
 
 ### Production Checklist
