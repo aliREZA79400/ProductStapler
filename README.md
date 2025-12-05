@@ -49,6 +49,29 @@ The entire frontend section is written with LLM (Claude 4.5). Other sections are
 3. **Backend API** → Reads clustered products → Serves hierarchical endpoints
 4. **Frontend** → Consumes API → Displays products in hierarchical categories
 
+## Initianl Setup
+
+in project root :
+
+1. docker compose up -d mongodb
+
+2. docker compose up -d data-pipeline
+
+3. check the http://localhost:4200 and run the flow manually for the first time.
+
+4. docker compose up -d mlflow 
+
+5. train the model in lab/model_development.ipynb  and register the model in mlflow.
+
+6. for initial model setup run this command in mlflow container:
+
+docker exec -it mlflow bash
+
+```python3 -m ml.model```
+
+7. docker compose up -d backend frontend
+
+
 ## Project Components
 
 ### 📊 Data Pipeline (`data/`)
@@ -185,30 +208,6 @@ The entire frontend section is written with LLM (Claude 4.5). Other sections are
 - `model_development.ipynb`: Clustering algorithm development and evaluation
 - `preprocessing.ipynb`: Feature engineering experimentation
 
-## Docker Compose Setup
-
-The project uses Docker Compose to orchestrate all services with proper dependency management, health checks, and volume persistence.
-
-### Services Overview
-
-The `docker-compose.yml` defines five main services:
-
-1. **MongoDB** (Database)
-2. **MLflow** (ML Tracking & Model Registry)
-3. **Backend** (FastAPI REST API)
-4. **Frontend** (React + Nginx)
-5. **Data Pipeline** (Prefect + Scraping Pipeline)
-
-### Build Optimization
-
-Uses YAML anchors to avoid redundant builds:
-
-```yaml
-x-ml-build: &ml-build      # Define once
-x-backend-build: &backend-build
-```
-
-Services reference these anchors, enabling efficient image reuse.
 
 ## Quick Start with Docker Compose
 
@@ -307,6 +306,7 @@ curl http://localhost:4200/health
 #### 5. Access Services
 
 - **Frontend**: <http://localhost:8080>
+- **Prefect UI**: <http://localhost:4200>
 - **Backend API**: <http://localhost:8000>
   - **Swagger UI**: <http://localhost:8000/docs>
   - **ReDoc**: <http://localhost:8000/redoc>
@@ -450,87 +450,7 @@ If you prefer running services locally:
 - Git
 
 
-## Usage Examples
-
-### Accessing the Application
-
-1. **Frontend**: Navigate to <http://localhost:8080>
-   - Register a new user
-   - Login to access protected routes
-   - Browse products through hierarchical categories
-
-2. **API Documentation**: Visit <http://localhost:8000/docs>
-   - Interactive Swagger UI
-   - Test endpoints directly
-   - View request/response schemas
-
-3. **MLflow UI**: Visit <http://localhost:5000>
-   - View experiment runs
-   - Compare model metrics
-   - Access model registry
-
-### API Usage
-
-```bash
-# Get Level 1 product samples
-curl "http://localhost:8000/?sample_size=5"
-
-# Get Level 2 samples for Level 1 cluster 0
-curl "http://localhost:8000/sub/0?sample_size=3"
-
-# Get product by ID
-curl "http://localhost:8000/product/8860414"
-
-# Register user
-curl -X POST "http://localhost:8000/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{"username": "user1", "password": "password123"}'
-
-# Login
-curl -X POST "http://localhost:8000/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=user1&password=password123"
-```
-
-## Troubleshooting
-
-### Common Docker Issues
-
-**Services won't start**:
-
-```bash
-# Check logs
-docker-compose logs
-
-# Check if ports are already in use
-netstat -tulpn | grep -E '27017|8000|5000|8080'
-
-# Rebuild images
-docker-compose build --no-cache
-```
-
-**MongoDB connection errors**:
-
-- Verify MongoDB is healthy: `docker-compose ps mongodb`
-- Check connection string format in environment variables
-- Ensure authentication credentials match
-
-**Volume permission issues**:
-
-```bash
-# Set UID/GID environment variables
-export UID=$(id -u)
-export GID=$(id -g)
-docker-compose up -d
-```
-
-**Frontend can't connect to backend**:
-
-- Verify backend is running: `curl http://localhost:8000/docs`
-- Check nginx.conf proxy configuration
-- Verify frontend container logs
-
-### Service-Specific Issues
+## Service-Specific Issues
 
 See individual README files:
 
