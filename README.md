@@ -12,6 +12,7 @@ What if instead of pagination of products, we could see them categorized and mak
 
 This Project is an end-to-end system from web scraping to hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
 
+for better look, see the : [`mangane.mp4`](mangane.mp4)
 
 ## Project Overview
 
