@@ -480,13 +480,6 @@ See individual README files:
 
 See [LICENSE](LICENSE) file for details.
 
-## Additional Resources
-
-- [`data/README.md`](data/README.md) - Async scraping & ETL details
-- [`ml/README.md`](ml/README.md) - Clustering models & feature engineering
-- [`backend/README.md`](backend/README.md) - API design & endpoints
-- [`frontend/README.md`](frontend/README.md) - Frontend architecture
-
 ## Support
 
 For issues or questions:
