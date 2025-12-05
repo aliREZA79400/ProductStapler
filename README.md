@@ -237,9 +237,6 @@ URL = https://api.digikala.com/v1/categories/mobile-phone/search/
 QUERY = ?sort=4 &
 page=
 TIMEOUT = 100
-
-RUN_MODE = scheduler
-
 ENABLE_LOGGING = 0
 PRODUCT_BASE_URL = https://api.digikala.com/v2/product/
 COMMENTS_BASE_URL = https://api.digikala.com/v1/rate-review/products/
@@ -268,7 +265,7 @@ MLFLOW_TRACKING_URI=http://mlflow:5000
 **For Backend** (create `.env` file or set environment variables):
 
 ```env
-SECRET_KEY = 0186e0effe59317be4c88fc1634aa97ddd7f4711082af0c223c3c4dfc0711acf
+SECRET_KEY = change-me
 ALGORITHM = HS256
 ACCESS_TOKEN_EXPIRE_MINUTES =  30
 KEYS_TO_SHOW = _id , price , title_fa  , images
