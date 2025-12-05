@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<video controls src="mangane.mp4" title="Title"></video>
+![alt text](images/mangane_main_page.png)
 
 </div>
 
