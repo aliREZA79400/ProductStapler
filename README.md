@@ -438,18 +438,6 @@ The entire system follows a three-level hierarchy:
 - **Persistence**: Docker volumes for data retention
 
 
-## Development Setup (Without Docker)
-
-If you prefer running services locally:
-
-### Local Development Prerequisites
-
-- Python 3.13+
-- Node.js 20+
-- MongoDB 7+
-- Git
-
-
 ## Service-Specific Issues
 
 See individual README files:
@@ -459,32 +447,6 @@ See individual README files:
 - [`backend/README.md`](backend/README.md) - API troubleshooting
 - [`frontend/README.md`](frontend/README.md) - Frontend troubleshooting
 
-## Performance Optimization
-
-### Recommended MongoDB Indexes
-
-Create indexes for optimal query performance:
-
-```javascript
-db.products.createIndex({ "cluster_info.level1_id": 1 })
-db.products.createIndex({ "cluster_info.level2_id": 1 })
-db.products.createIndex({ "cluster_info.level3_id": 1 })
-db.products.createIndex({ "_id": 1 })
-```
-
-### Resource Limits
-
-Consider setting resource limits in `docker-compose.yml` for production:
-
-```yaml
-services:
-  backend:
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-```
 
 ## Security Considerations
 
@@ -517,13 +479,6 @@ services:
 ## License
 
 See [LICENSE](LICENSE) file for details.
-
-## Additional Resources
-
-- [`data/README.md`](data/README.md) - Async scraping & ETL details
-- [`ml/README.md`](ml/README.md) - Clustering models & feature engineering
-- [`backend/README.md`](backend/README.md) - API design & endpoints
-- [`frontend/README.md`](frontend/README.md) - Frontend architecture
 
 ## Support
 
