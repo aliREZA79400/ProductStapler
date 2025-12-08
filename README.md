@@ -8,7 +8,7 @@
 
 Stapler is the answer to this question.
 
-What if instead of pagination of products, we could see them categorized and make a more targeted and intelligent choice?
+What if instead of pagination of products, we could see them categorized and nested and make a more targeted and intelligent choice?
 
 This Project is an end-to-end system from web scraping to hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
 
