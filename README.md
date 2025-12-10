@@ -8,10 +8,15 @@
 
 Stapler is the answer to this question.
 
-What if instead of pagination of products, we could see them categorized and make a more targeted and intelligent choice?
+What if instead of pagination of products, we could see them categorized and nested and make a more targeted and intelligent choice?
 
 This Project is an end-to-end system from web scraping to hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
 
+<<<<<<< HEAD
+=======
+for better look, see the : [`mangane.mp4`](mangane.mp4)
+
+>>>>>>> 7c7514478e8cd95eefc7b9fa696c9fa97a4ef2de
 ## Project Overview
 
 Stapler is a full-stack application that:
@@ -230,31 +235,47 @@ Create environment files for each service:
 **For Data Pipeline** (`data/.env_data`):
 
 ```env
-URL=https://api.example.com
-PRODUCT_BASE_URL=https://api.example.com/products/
-COMMENTS_BASE_URL=https://api.example.com/comments/
-TIMEOUT=400
-ENABLE_LOGGING=1
+URL = https://api.digikala.com/v1/categories/mobile-phone/search/
+QUERY = ?sort=4 &
+page=
+TIMEOUT = 100
+ENABLE_LOGGING = 0
+PRODUCT_BASE_URL = https://api.digikala.com/v2/product/
+COMMENTS_BASE_URL = https://api.digikala.com/v1/rate-review/products/
+
+MONGO_URI = mongodb://root:example@mongodb:27017/?authSource=admin
+DB_NAME = digikala
+CHUNK_SIZE = 1000
+
+PRODUCTS_COLLECTION = "products"
+COMMENTS_COLLECTION = "comments"
+DATA_PIPELINE_PORT= 4200
+```
+**For mlflow** (create `.env` file or set environment variables):
+
+```env
+MODEL_NAME = Linkage
+MODEL_VERSION = 2
+
+MLFLOW_SERVER_ALLOWED_HOSTS=mlflow,localhost,127.0.0.1,*
 MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
 DB_NAME=digikala
-CHUNK_SIZE=100
 PRODUCTS_COLLECTION=products
-COMMENTS_COLLECTION=comments
-PREFECT_HOST=0.0.0.0
-PREFECT_PORT=4200
+MLFLOW_TRACKING_URI=http://mlflow:5000
 ```
 
 **For Backend** (create `.env` file or set environment variables):
 
 ```env
+SECRET_KEY = change-me
+ALGORITHM = HS256
+ACCESS_TOKEN_EXPIRE_MINUTES =  30
+KEYS_TO_SHOW = _id , price , title_fa  , images
+
 MONGO_URI=mongodb://root:example@mongodb:27017/?authSource=admin
 DB_NAME=digikala
 PRODUCTS_COLLECTION=products
 USERS_COLLECTION=users
-SECRET_KEY=your-secure-secret-key-here-change-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-KEYS_TO_SHOW=_id,title_en,price,cluster_info.level1_id
 ```
 
 **Optional Environment Variables** (can be set in shell):
@@ -262,9 +283,6 @@ KEYS_TO_SHOW=_id,title_en,price,cluster_info.level1_id
 ```bash
 export UID=$(id -u)
 export GID=$(id -g)
-export MODEL_NAME=Linkage
-export MODEL_VERSION=2
-export FRONTEND_PORT=8080
 ```
 
 #### 3. Build and Start All Services
