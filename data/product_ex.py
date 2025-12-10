@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import aiofiles
 from httpx import AsyncClient
-from .config import ENABLE_LOGGING , COMMENTS_BASE_URL , PRODUCT_BASE_URL
+from .config import ENABLE_LOGGING, COMMENTS_BASE_URL, PRODUCT_BASE_URL
 from .util.async_timer import async_time
 from .util.logger import setup_logger
 import logging
@@ -44,9 +44,8 @@ if ENABLE_LOGGING:
 
     # Initialize logger with module name and file path
     logger = setup_logger("Product_Extractor", log_file_path=log_file_path)
-else :
+else:
     logger = logging.getLogger("Test")
-
 
 
 class ProductExtractor:
@@ -63,10 +62,9 @@ class ProductExtractor:
         base_url: str,
         timeout: int,
         concurrency: int = 5,
-        client: Optional[AsyncClient] = None,
         logger_instance=logger,
-        comments_base_url: str=None,
-        state : str = None,
+        comments_base_url: str = "",
+        state: str = "",
     ):
         """
         Initialize the ProductExtractor with API configuration.
@@ -84,7 +82,7 @@ class ProductExtractor:
         # Create semaphore to limit concurrent requests
         self.semaphore = asyncio.Semaphore(concurrency)
         # Use provided client or create default one with Firefox impersonation
-        self.client = AsyncClient(timeout=timeout,follow_redirects=True)
+        self.client = AsyncClient(timeout=timeout, follow_redirects=True)
         self.logger = logger_instance
         self.comments_base_url = comments_base_url
         self.state = state
@@ -143,9 +141,7 @@ class ProductExtractor:
         self.logger.debug(f"Fetching the Brand Products {brand_id}")
 
         # Create tasks for fetching product data for each product
-        tasks = [
-            asyncio.create_task(self.fetch_product(pid)) for pid in product_ids
-        ]
+        tasks = [asyncio.create_task(self.fetch_product(pid)) for pid in product_ids]
 
         # Wait for all tasks to complete with timeout
         done, pending = await asyncio.wait(tasks, timeout=self.timeout)
@@ -161,13 +157,10 @@ class ProductExtractor:
                 if item is not None:
                     result_by_brand[brand_id].append(item)
             except Exception as e:
-                self.logger.error(
-                    f"Found error {e} when processing"
-                )
+                self.logger.error(f"Found error {e} when processing")
 
         self.logger.info(f"{brand_id} Fetched")
         return result_by_brand
-
 
     @async_time()
     async def _fetch_comments_page(
@@ -265,9 +258,7 @@ class ProductExtractor:
 
     @async_time()
     async def fetch_brand_comments(
-        self,
-        brand_id: Union[int, str],
-        product_ids: List[Union[int, str]]
+        self, brand_id: Union[int, str], product_ids: List[Union[int, str]]
     ) -> dict:
         """
         Fetch data for all products comments belonging to a specific brand.
@@ -300,9 +291,7 @@ class ProductExtractor:
                 if item is not None:
                     result_by_brand[brand_id].append(item)
             except Exception as e:
-                self.logger.error(
-                    f"Found error {e} when processing"
-                )
+                self.logger.error(f"Found error {e} when processing")
 
         self.logger.info(f"{brand_id} Fetched")
         return result_by_brand
@@ -329,8 +318,8 @@ class ProductExtractor:
         Note:
             Only processes brands that have non-empty product ID lists
         """
-        match self.state :
-            case  "Products":
+        match self.state:
+            case "Products":
                 tasks = [
                     asyncio.create_task(
                         self.fetch_brand_products(brand_id, product_ids)
@@ -345,10 +334,10 @@ class ProductExtractor:
                     )
                     for brand_id, product_ids in brands_info.items()
                     if len(product_ids) != 0
-                ]                
+                ]
 
         # Wait for all brand processing tasks to complete
-        done, pending = await asyncio.wait(tasks, timeout=self.timeout)
+        done, pending = await asyncio.wait(tasks, timeout=self.timeout)  # pyright: ignore
         self.logger.debug(f"Done task : {len(done)} , Pending tassk : {len(pending)} ")
 
         # Collect all results from completed tasks
@@ -399,8 +388,6 @@ class ProductExtractor:
             return None
 
 
-
-
 # This section demonstrates how to use the ProductExtractor class
 
 # # Load brand information from file
@@ -433,4 +420,3 @@ class ProductExtractor:
 
 #     # Save results to file
 #     asyncio.run(extractor.save(all_results, out_file))
-

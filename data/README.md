@@ -8,7 +8,7 @@ The pipeline follows an Extract, Transform, Load (ETL) architecture with three m
 
 1. **Extract**: Async web scraping to fetch brand and product data
 2. **Transform**: Data normalization and schema validation
-3. **Load**: Async batch loading into MongoDB
+3. **Load**: Async batch loading into MongoDB (Parallel)
 
 The entire pipeline is designed around asynchronous operations to maximize throughput and efficiency.
 

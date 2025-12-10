@@ -12,7 +12,14 @@ from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError, OperationFailure
 
 from .util.logger import setup_logger
-from .config import CHUNK_SIZE , PRODUCTS_COLLECTION , COMMENTS_COLLECTION , ENABLE_LOGGING , MONGO_URI , DB_NAME
+from .config import (
+    CHUNK_SIZE,
+    PRODUCTS_COLLECTION,
+    COMMENTS_COLLECTION,
+    ENABLE_LOGGING,
+    MONGO_URI,
+    DB_NAME,
+)
 
 NUM_PROCESSES = os.cpu_count() or 1
 
@@ -35,7 +42,7 @@ if ENABLE_LOGGING:
     log_file_path = os.path.join(script_dir, log_filename)
 
     logger = setup_logger("ETL Pipeline", log_file_path=log_file_path)
-else : 
+else:
     logger = logging.getLogger("ETL Pipeline")
 
 
@@ -61,7 +68,11 @@ def find_latest_file(base_dir: str, file_type: str) -> str | None:
 
         # Filter for files that match the naming convention
         # e.g., "2025-08-24_16-36-04_Products.json"
-        matching_files = [f for f in all_files if f.startswith(f"{file_type}_") and f.endswith(".json")]
+        matching_files = [
+            f
+            for f in all_files
+            if f.startswith(f"{file_type}_") and f.endswith(".json")
+        ]
 
         if not matching_files:
             logger.warning(f"No files of type '{file_type}' found.")
@@ -528,14 +539,16 @@ async def run_chunked_pipeline_concurrently(
 
 
 # --- Separate ETL Functions ---
-async def run_products_etl(mongo_uri: str, product_path: str,db_name: str ,products_collection: str):
+async def run_products_etl(
+    mongo_uri: str, product_path: str, db_name: str, products_collection: str
+):
     """Runs ETL pipeline for products only."""
     executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
     client = None
     try:
         client = AsyncIOMotorClient(mongo_uri)
         db = client[db_name]
-        products_collection = db[products_collection]
+        products_collection = db[products_collection]  # pyright: ignore
 
         await run_chunked_pipeline_concurrently(
             product_path,
@@ -556,15 +569,16 @@ async def run_products_etl(mongo_uri: str, product_path: str,db_name: str ,produ
             executor.shutdown(wait=True)
 
 
-async def run_comments_etl(mongo_uri: str, comments_path: str, db_name: str , comments_collection: str):
+async def run_comments_etl(
+    mongo_uri: str, comments_path: str, db_name: str, comments_collection: str
+):
     """Runs ETL pipeline for comments only."""
     executor = ProcessPoolExecutor(max_workers=NUM_PROCESSES)
     client = None
     try:
         client = AsyncIOMotorClient(mongo_uri)
         db = client[db_name]
-        comments_collection = db[comments_collection]
-
+        comments_collection = db[comments_collection]  # pyright: ignore
         await run_chunked_pipeline_concurrently(
             comments_path,
             comments_collection,
@@ -591,7 +605,9 @@ async def main():
     client = None
     try:
         # Discover latest input files now (pipeline may have created them just before)
-        products_path = find_latest_file(base_dir="./original_data", file_type="Products")
+        products_path = find_latest_file(
+            base_dir="./original_data", file_type="Products"
+        )
         # comments_path = find_latest_file(base_dir="./original_data", file_type="Comments")
 
         # if not products_path:

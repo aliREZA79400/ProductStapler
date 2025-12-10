@@ -11,8 +11,8 @@ import os
 from datetime import datetime
 import json
 
-from httpx import AsyncClient 
-from .config import ENABLE_LOGGING , URL , QUERY , TIMEOUT
+from httpx import AsyncClient
+from .config import ENABLE_LOGGING, URL, QUERY, TIMEOUT
 from .util.async_timer import async_time
 from .util.logger import setup_logger
 import logging
@@ -50,7 +50,7 @@ class Extractor:
     with proper error handling and logging.
     """
 
-    def __init__(self, base_url:str, query:str, timeout:int) -> None:
+    def __init__(self, base_url: str, query: str, timeout: int) -> None:
         """
         Initialize the Extractor with API configuration.
 
@@ -61,7 +61,7 @@ class Extractor:
         """
         self.base_url = base_url
         self.query = query
-        self.client = AsyncClient(timeout=timeout,follow_redirects=True)
+        self.client = AsyncClient(timeout=timeout, follow_redirects=True)
         self.timeout = timeout
 
     @async_time()
@@ -73,19 +73,22 @@ class Extractor:
             set: Set of tuples containing (brand_id, brand_code) for all brands
         """
         try:
-           # Make request to get brand information
-           req = await self.client.get(url=self.base_url)
+            # Make request to get brand information
+            req = await self.client.get(url=self.base_url)
         except Exception as e:
-            logger.error(f"Error fetching all brands: {e} with status code {req.status_code}", exc_info=True)
+            logger.error(f"Error fetching all brands: {e}", exc_info=True)
             return set()
         try:
-           res = req.json()
+            res = req.json()
         except Exception as e:
-            logger.error(f"Error extracting brands: {e}", exc_info=True)
+            logger.error(
+                f"Error extracting brands: {e} with status code {req.status_code}",
+                exc_info=True,
+            )
             return set()
-        
-        # Extract brand options from API response 
-        #TODO: parameterize this as a query parameter
+
+        # Extract brand options from API response
+        # TODO: parameterize this as a query parameter
         brands = res["data"]["filters"]["brands"]["options"]
 
         # Create set of (id, code) tuples for all brands
@@ -94,7 +97,7 @@ class Extractor:
         return all_brands
 
     @async_time()
-    async def get_total_pages_of_each_brand(self, brand_id:int) -> int:
+    async def get_total_pages_of_each_brand(self, brand_id: int) -> int:
         """
         Get the total number of pages for products of a specific brand.
 
@@ -106,26 +109,34 @@ class Extractor:
         """
         # Make request with brand filter to get pagination info
         try:
-          req = await self.client.get(
-            #TODO: this is business logic . parameterize this as a query parameter
-            url=f"{self.base_url}?has_selling_stock=1&brand[0]={brand_id}&page=1"
-        )
+            req = await self.client.get(
+                # TODO: this is business logic . parameterize this as a query parameter
+                url=f"{self.base_url}?has_selling_stock=1&brand[0]={brand_id}&page=1"
+            )
         except Exception as e:
-            logger.error(f"Error fetching total pages of brand {brand_id}: {e} with status code {req.status_code}", exc_info=True)
+            logger.error(
+                f"Error fetching total pages of brand {brand_id}: {e}",
+                exc_info=True,
+            )
             return 0
         try:
             res = req.json()
         except Exception as e:
-            logger.error(f"Error extracting total pages of brand {brand_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error extracting total pages of brand {brand_id}: {e} with status code {req.status_code}",
+                exc_info=True,
+            )
             return 0
         # Extract total pages from response
-        #TODO: parameterize this as a query parameter
+        # TODO: parameterize this as a query parameter
         total_page = res["data"]["pager"]["total_pages"]
 
         return total_page
 
     @async_time()
-    async def get_product_ids_of_each_brand(self, brand_id:int, total_pages:int) -> set:
+    async def get_product_ids_of_each_brand(
+        self, brand_id: int, total_pages: int
+    ) -> set:
         """
         Fetch all product IDs for a specific brand across all its pages.
 
@@ -139,7 +150,7 @@ class Extractor:
         # Limit concurrent requests to avoid overwhelming the server
         semaphore = asyncio.Semaphore(5)
 
-        async def fetch_page(page_num:int) -> set:
+        async def fetch_page(page_num: int) -> set:
             """
             Fetch product IDs from a specific page of a brand.
 
@@ -152,18 +163,24 @@ class Extractor:
             async with semaphore:
                 try:
                     # Construct URL with brand filter and page number
-                    #TODO: this is business logic . parameterize this as a query parameter
-                    try :
-                       resp = await self.client.get(
-                        url=f"{self.base_url}?brand[0]={brand_id}&page={page_num}"
-                    )
+                    # TODO: this is business logic . parameterize this as a query parameter
+                    try:
+                        resp = await self.client.get(
+                            url=f"{self.base_url}?brand[0]={brand_id}&page={page_num}"
+                        )
                     except Exception as e:
-                        logger.error(f"Error fetching page {page_num} of category {brand_id}: {e} with status code {resp.status_code}", exc_info=True)
+                        logger.error(
+                            f"Error fetching page {page_num} of category {brand_id}: {e}",
+                            exc_info=True,
+                        )
                         return set()
                     try:
                         result = resp.json()
                     except Exception as e:
-                        logger.error(f"Error extracting page {page_num} of category {brand_id}: {e}", exc_info=True)
+                        logger.error(
+                            f"Error extracting page {page_num} of category {brand_id}: {e} with status code {resp.status_code}",
+                            exc_info=True,
+                        )
                         return set()
                     # Extract product IDs from response
                     products = result["data"]["products"]
@@ -293,5 +310,3 @@ class Extractor:
 # except Exception as e:
 #     print(f"File not found and accure erroe {e} ")
 #     brands_info = None
-
-
