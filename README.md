@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<video controls src="mangane.mp4" title="Title"></video>
+![alt text](images/mangane_main_page.png)
 
 </div>
 
@@ -12,12 +12,11 @@ What if instead of pagination of products, we could see them categorized and mak
 
 This Project is an end-to-end system from web scraping to hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
 
-
 ## Project Overview
 
 Stapler is a full-stack application that:
 
-1. **Scrapes** product data from web APIs using high-performance async operations
+1. **Scrapes** product data from web APIs using high-performance async and parallel operations
 2. **Clusters** products using hierarchical nested clustering algorithms
 3. **Serves** clustered products through a REST API with hierarchical navigation
 4. **Displays** products in a modern web interface with authentication
@@ -38,9 +37,10 @@ The system is designed with a microservices architecture, fully containerized wi
                                         │   (MLflow)   │
                                         └──────────────┘
 ```
-## AI Use Note
-The entire frontend section is written with LLM (Claude 4.5). Other sections are used for documentation, cleaning, test writing, and using hints.
 
+## AI Use Note
+
+The entire frontend section is written with LLM (Claude 4.5). Other sections are used for documentation, cleaning, test writing, and using hints.
 
 ### Data Flow
 
@@ -57,9 +57,9 @@ in project root :
 
 2. docker compose up -d data-pipeline
 
-3. check the http://localhost:4200 and run the flow manually for the first time.
+3. check the <http://localhost:4200> and run the flow manually for the first time.
 
-4. docker compose up -d mlflow 
+4. docker compose up -d mlflow
 
 5. train the model in lab/model_development.ipynb  and register the model in mlflow.
 
@@ -70,7 +70,6 @@ docker exec -it mlflow bash
 ```python3 -m ml.model```
 
 7. docker compose up -d backend frontend
-
 
 ## Project Components
 
@@ -208,7 +207,6 @@ docker exec -it mlflow bash
 - `model_development.ipynb`: Clustering algorithm development and evaluation
 - `preprocessing.ipynb`: Feature engineering experimentation
 
-
 ## Quick Start with Docker Compose
 
 ### Prerequisites
@@ -312,7 +310,6 @@ curl http://localhost:4200/health
   - **ReDoc**: <http://localhost:8000/redoc>
 - **MLflow UI**: <http://localhost:5000>
 - **MongoDB**: `mongodb://localhost:27017`
-
 
 ## Project Structure
 
@@ -437,7 +434,6 @@ The entire system follows a three-level hierarchy:
 - **Scalability**: Async operations, chunked processing
 - **Persistence**: Docker volumes for data retention
 
-
 ## Service-Specific Issues
 
 See individual README files:
@@ -446,7 +442,6 @@ See individual README files:
 - [`ml/README.md`](ml/README.md) - ML pipeline troubleshooting
 - [`backend/README.md`](backend/README.md) - API troubleshooting
 - [`frontend/README.md`](frontend/README.md) - Frontend troubleshooting
-
 
 ## Security Considerations
 
