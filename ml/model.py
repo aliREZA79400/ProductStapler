@@ -17,11 +17,11 @@ model_uri = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
 
 model = sklearn.load_model(model_uri)
 
-all_products_cluster_info = model.sample_assignments
-print(all_products_cluster_info)
-client = AsyncIOMotorClient(MONGO_URI)
-db = client[DB_NAME]
-products_collection = db[PRODUCTS_COLLECTION]
+# all_products_cluster_info = model.sample_assignments
+# print(all_products_cluster_info)
+client = AsyncIOMotorClient(str(MONGO_URI))
+db = client[str(DB_NAME)]
+products_collection = db[str(PRODUCTS_COLLECTION)]
 
 
 async def update_products_cluster_info():
@@ -33,7 +33,7 @@ async def update_products_cluster_info():
     from ml.preprocessing import Preprocessor
 
     # Convert list of dicts to dict with id as key for faster lookup
-    cluster_info_map = {item["id"]: item for item in all_products_cluster_info}
+    # cluster_info_map = {item["id"]: item for item in all_products_cluster_info}
 
     # Pre-load the preprocessing pipeline
     preprocessing = Preprocessor()
@@ -44,41 +44,36 @@ async def update_products_cluster_info():
         This assumes product is a dictionary like from MongoDB.
         """
         import pandas as pd
+
         # Put product into single-row DataFrame
         df = pd.DataFrame([product])
         # Only use columns present in the preprocessing pipeline
         # If columns are missing, we just let the transformers impute/fail as designed
         X_array = preprocessing.transform(df)
         # If more than 1D output, flatten or select first row
-        if X_array.shape[0] == 1:
+        if X_array.shape[0] == 1:  # pyright:ignore
             return X_array[0]
         return X_array
 
     # Find all products that need updating
-    cursor = products_collection.find({"cluster_info": {"$exists": False}})
+    # TODO updating products with new model (use all products with exists True)
+    cursor = products_collection.find({})
 
     async for product in cursor:
         try:
-            if product["_id"] in cluster_info_map:
+            try:
+                X_query = extract_features_to_X(product)
+                pred_result = model.predict([X_query])[0]  # pyright:ignore
                 cluster_info = {
-                    "level1_id": cluster_info_map[product["_id"]]["level1_id"],
-                    "level2_id": cluster_info_map[product["_id"]]["level2_id"],
-                    "level3_id": cluster_info_map[product["_id"]]["level3_id"],
+                    "level1_id": pred_result.get("level1_id"),
+                    "level2_id": pred_result.get("level2_id"),
+                    "level3_id": pred_result.get("level3_id"),
                 }
-            else:
-                # If no cluster info is found, use model.predict to assign
-                print(f"No cluster info found for product {product['_id']}, predicting cluster info...")
-                try:
-                    X_query = extract_features_to_X(product)
-                    pred_result = model.predict([X_query])[0]  # predict expects 2D shape
-                    cluster_info = {
-                        "level1_id": pred_result.get("level1_id"),
-                        "level2_id": pred_result.get("level2_id"),
-                        "level3_id": pred_result.get("level3_id"),
-                    }
-                except Exception as ee:
-                    print(f"Error extracting features or predicting for product {product.get('_id')}: {str(ee)}")
-                    continue  # skip updating if can't extract/predict
+            except Exception as ee:
+                print(
+                    f"Error extracting features or predicting for product {product.get('_id')}: {str(ee)}"
+                )
+                continue  # skip updating if can't extract/predict
 
             # Update the product with cluster information
             await products_collection.update_one(
