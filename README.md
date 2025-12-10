@@ -10,13 +10,10 @@ Stapler is the answer to this question.
 
 What if instead of pagination of products, we could see them categorized and nested and make a more targeted and intelligent choice?
 
-This Project is an end-to-end system from web scraping to hierarchical product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, hierarchical clustering models, REST API, and a modern React frontend.
+This Project is an end-to-end ML system from web scraping(Data Crawling) to Nested product browsing. The project implements a complete data pipeline from extraction to deployment, featuring async web scraping, nested clustering models, REST API, and a modern React frontend.
 
-<<<<<<< HEAD
-=======
-for better look, see the : [`mangane.mp4`](mangane.mp4)
+for better look, see the video : [`mangane.mp4`](mangane.mp4)
 
->>>>>>> 7c7514478e8cd95eefc7b9fa696c9fa97a4ef2de
 ## Project Overview
 
 Stapler is a full-stack application that:
@@ -25,8 +22,6 @@ Stapler is a full-stack application that:
 2. **Clusters** products using hierarchical nested clustering algorithms
 3. **Serves** clustered products through a REST API with hierarchical navigation
 4. **Displays** products in a modern web interface with authentication
-
-The system is designed with a microservices architecture, fully containerized with Docker Compose, and implements production-ready patterns for scalability and maintainability.
 
 ## System Architecture
 
@@ -251,6 +246,7 @@ PRODUCTS_COLLECTION = "products"
 COMMENTS_COLLECTION = "comments"
 DATA_PIPELINE_PORT= 4200
 ```
+
 **For mlflow** (create `.env` file or set environment variables):
 
 ```env
